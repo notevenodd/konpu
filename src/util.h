@@ -17,6 +17,32 @@
 //===</ C STANDARD >============================================================
 
 
+
+//===< "FREESTANDING" C >=======================================================
+// (minimal) includes from the C standard library: those includes should be
+// headers-only files which are safe to include even if we decide not to link
+// with libc:
+
+// C99:
+#include <float.h>
+// #include <iso646.h>
+#include <limits.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+// C11:
+// #include <stdalign.h>
+// #include <stdnoreturn.h>
+
+// upcoming C23:
+// #include <stdbit.h>
+
+//===</ "FREESTANDING" C >======================================================
+
+
+
 //===< VARIADIC OVERLOADING >===================================================
 // Utilities using variadic macros.
 // The most important one is UTIL_OVERLOAD, which supports macros/functions
@@ -68,17 +94,33 @@
 
 
 
-//===< "FREESTANDING" C >=======================================================
-// (minimal) includes from the C standard library: those includes should be
-// headers-only files which are safe to include even if we decide not to link
-// with libc:
+//===< unreachable() >==========================================================
+//
+// The C23+ function-like macro unreachable(). It results in undefined behaviour
+// if executed. So, you should ensure your code doesn't execute unreachable().
+// It may be used as an optimization as the compiler can use this to optimize
+// impossible code branches away.
+//
+// For example, if we know *for sure*, 3 < val <= 0, we can do:
+// switch (val) {
+//   case 0: ... break;
+//   case 1: ... break;
+//   case 2: ... break;
+//   default: unreachable();
+// }
+// and compiler may do a simple lookup with no other testing
 
-#include <stdbool.h>
-#include <stdint.h>
-#include <limits.h>
-
-//===</ "FREESTANDING" C >======================================================
-
+#if (__STDC_VERSION__ > 201710L)
+    // ^^-- >C17, ie C23 or later. unreachable() was defined in <stddef.h>
+#
+#elif defined(__GNUC__)
+#   define unreachable()   (__builtin_unreachable())
+#elif defined(_MSC_VER) // MSVC
+#   define unreachable()   (__assume(false))
+#else
+#   define unreachable()   do {} while(0)
+#endif
+//===</ unreachable() >=========================================================
 
 
 //===< ASSERT and STATIC ASSERT >===============================================
@@ -100,18 +142,24 @@
 #   define  assert(condition) ((void)0)
 #endif
 
+//TODO: we could just use `static_assert` instead of STATIC_ASSERT in UPPER_CASE
 // STATIC_ASSERT(condition);
-// We define our own macro (in UPPER_CASE) for compile-time assertions.
 // ('static_assert' now exists in C but isn't (fully) defined until C23)
-// Just one thing to note: this doesn't work inside structs/unions
-#define STATIC_ASSERT(CONDITION)  \
-        typedef char UTIL_EXPAND(static_assertion_at_line_, __LINE__) [(CONDITION)? 1 : -1]
-// note/reminder:
-// - C99 (which we want to support) doesn't have static_assert
-// - C11/C17 has _Static_assert(condition, mandatory_message) as a keyword
-//           (and <assert.h> maps that to the name 'static_assert').
-// - upcoming C23 has static_assert(condition, [optional_message]) as a keyword.
-
+#if (__STDC_VERSION__ > 201710L)
+    // ^^-- >C17, ie upcoming C23 or later: we already have it as keyword
+#   define STATIC_ASSERT(condition)  static_assert(condition)
+#elif (__STDC_VERSION__ > 199901L) || defined(__GNUC__)
+    // ^^-- strictly superior to C99, thus C11 and C17
+    //      has _Static_assert(expression, message) as a keyword
+    //      (and <assert.h> give it the name static_assert)
+    //      this is defined in GCC too.
+#   define STATIC_ASSERT(condition)  _Static_assert(condition, __LINE__)
+#else
+    // pre-C11 pure C solution
+    // this macro doesn't work inside structs/unions
+#   define STATIC_ASSERT(condition)  \
+           typedef char UTIL_EXPAND(static_assertion_line_, __LINE__) [(condition)? 1 : -1]
+#endif
 
 //===</ ASSERT and STATIC ASSERT >==============================================
 
@@ -136,15 +184,15 @@
 #endif
 
 // bit/byte selection macros:
-// - 'uint' should be of a unsigned integer type
-// - 'n'    should be >= 0 and less than the number of bits of the 'uint' type
-#define uint_bit( x, n)             (((x) >>   (n)) & 1   )
-#define uint_byte(x, n)             (((x) >> 8*(n)) & 0xFF)
+// - 'x' *MUST* be of a unsigned integer type (otherwise undefined behaviour)
+// - 'n' should be >= 0 and less than the number of bits of the 'uint' type
+#define uint_bit( x, n)             (((x) >>   (n)) & 1U   )
+#define uint_byte(x, n)             (((x) >> 8*(n)) & 0xFFU)
 
 // this macro merges bits from two unsigned integers according to a mask.
 // the mask should contains 0 where bits from x are selected, 1 where from y.
 #define UINT_MERGE(x, y, mask)      ((x) ^ (((x) ^ (y)) & (mask)))
-        // the obvious way would be (x & ~mask) | (y & mask), but the following may
+        // the obvious way would be (x & ~mask) | (y & mask), but this may
         // achieve the same with one operation less.
         // see: https://graphics.stanford.edu/~seander/bithacks.html#MaskedMerge
         // (sent there by Ron Jeffery)  (code snippet is in the public domain)
@@ -280,7 +328,7 @@ static inline  uint64_t   stc64_random (stc64_rng* rng);
 static inline  double     stc64_randomf(stc64_rng* rng);
 
 
-//--- inline implementation: ---------------------------------------------------
+//--- inline implementation ----------------------------------------------------
 
 static inline void random_init(uint64_t seed) {
    extern stc64_rng stc64_global; // global stc64 state
@@ -325,6 +373,25 @@ static inline double stc64_randomf(stc64_rng* rng) {
 
 //===< MISC. >==================================================================
 
+// Hints to give the compiler to favour the "likely" side of a branch.
+// see: https://stackoverflow.com/questions/109710/how-do-the-likely-unlikely-macros-in-the-linux-kernel-work-and-what-is-their-ben
+#if (defined(__GNUC__) || defined(__clang__))
+#   define likely(condition)    __builtin_expect((condition), 1)
+#   define unlikely(condition)  __builtin_expect((condition), 0)
+#else
+#   define likely(condition)    (condition)
+#   define unlikely(condition)  (condition)
+#endif
+
+// compile-time constant of type size_t representing the number of elements of
+// the given array. ONLY USE ON ARRAYS with size known at compile time (no VLAs)
+// DON'T USE ON POINTERS (hint: arrays received as parameters decay to pointers)
+#define ARRAY_SIZE(array)       (sizeof((array)) / sizeof((array)[0]))
+
+// `strlen` as a compile time constant for C string literals (BE CAREFUL)
+#define CSTR_LENGTH(cstr_lit)   (ARRAY_SIZE(cstr_lit) - 1)
+
+
 // clamp an *integer* variable of a *signed* type between 0 and a max value
 #define UTIL_CLAMP(x, max) do               \
         { if ((x) < 0)        (x) = 0;      \
@@ -346,9 +413,8 @@ static inline double stc64_randomf(stc64_rng* rng) {
              (y) = tmp;                                  \
            } while (0)
 #elif (defined(__GNUC__) || defined(__clang__))
-    // typeof as a compiler extension:
 #   define UTIL_SWAP(x, y) do                            \
-           { STATIC_ASSERT(sizeof((x)) == sizeof((y)));  \
+           { STATIC_ASSERT(__builtin_types_compatible_p(__typeof__((x)), __typeof__((y)))); \
              __typeof__((x)) tmp = (x);                  \
              (x) = (y);                                  \
              (y) = tmp;                                  \
