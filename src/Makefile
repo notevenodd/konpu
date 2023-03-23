@@ -1,17 +1,14 @@
 CC = gcc
-CFLAGS = -std=c99 $(EXTRA_CFLAGS) -fdiagnostics-color -O2 -Wall -Wextra -Werror
-LDFLAGS =
-ARCHFLAGS =
+CFLAGS = -std=c99 -fdiagnostics-color -O2 -Wall -Wextra -pedantic -Werror $(EXTRA_CFLAGS)
+ARCHFLAGS = $(EXTRA_ARCHFLAGS)
 
-EXE = konpu
 SRC = $(wildcard *.c)
 OBJ = $(SRC:.c=.o)
 DEP = $(SRC:.c=.d)
 
-all: $(EXE)
+.PHONY: all clean cleanall
 
-$(EXE): $(OBJ)
-	$(CC) $(LDFLAGS) $(ARCHFLAGS) -o $@ $(OBJ)
+all: $(OBJ)
 
 -include $(DEP)
 
