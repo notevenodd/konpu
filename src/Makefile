@@ -1,5 +1,6 @@
 CC = gcc
-CFLAGS = -std=c99 -fdiagnostics-color -O2 -Wall -Wextra -pedantic -Werror $(EXTRA_CFLAGS)
+CWARN = -Wall -Wextra -pedantic -fanalyzer -Werror $(EXTRA_CWARN)
+CFLAGS = -std=c99 -fdiagnostics-color -O2 $(CWARN) $(EXTRA_CFLAGS)
 ARCHFLAGS = $(EXTRA_ARCHFLAGS)
 
 SRC = $(wildcard *.c)
