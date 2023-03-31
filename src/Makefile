@@ -1,6 +1,7 @@
 CC = gcc
-CWARN = -Wall -Wextra -pedantic -fanalyzer -Werror $(EXTRA_CWARN)
-CFLAGS = -std=c99 -fdiagnostics-color -O2 $(CWARN) $(EXTRA_CFLAGS)
+CDEFS = -DKONPU_PLATFORM_SDL2 # -DKONPU_PLATFORM_POSIX $(EXTRA_CDEFS)
+CWARN = -Wall -Wextra -pedantic -fanalyzer $(EXTRA_CWARN)
+CFLAGS = -std=c99 $(shell sdl2-config --cflags) -fdiagnostics-color -O2 $(CDEFS) $(CWARN) $(EXTRA_CFLAGS)
 ARCHFLAGS = $(EXTRA_ARCHFLAGS)
 
 SRC = $(wildcard *.c)
