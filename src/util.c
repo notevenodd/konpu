@@ -1,6 +1,49 @@
 #include "util.h"
 
 
+#if   KONPU_PLATFORM_WINDOWS
+#elif KONPU_PLATFORM_POSIX
+#     if _POSIX_C_SOURCE >= 199309L
+#        include <time.h>
+#     else
+#        include <unistd.h>
+#     endif
+#elif KONPU_PLATFORM_LIBC && (__STDC_VERSION__ >= 201112L) && !defined(__STDC_NO_THREADS__)
+#     include <time.h>
+#     include <threads.h>
+#endif
+void sleep_ms(int milliseconds)
+{
+    if (milliseconds <= 0) return;
+
+#if KONPU_PLATFORM_SDL2
+    SDL_Delay(milliseconds);
+
+#elif KONPU_PLATFORM_WINDOWS
+    Sleep(milliseconds);
+
+#elif KONPU_PLATFORM_POSIX
+#   if _POSIX_C_SOURCE >= 199309L
+       struct timespec ts = { .tv_sec  =  milliseconds / 1000,
+                              .tv_nsec = (milliseconds % 1000) * 1000000L };
+       nanosleep(&ts, NULL);
+#   else
+       usleep(milliseconds * 1000);
+#   endif
+
+#elif KONPU_PLATFORM_LIBC && (__STDC_VERSION__ >= 201112L) && !defined(__STDC_NO_THREADS__)
+    // C thread API:
+    struct timespec ts = { .tv_sec  =  milliseconds / 1000,
+                           .tv_nsec = (milliseconds % 1000) * 1000000L };
+    thrd_sleep(&ts, NULL);
+
+#else
+    // if we have no supported platform, we do nothing
+    // (we're not gonna try to make a "busy" empty loop)
+#endif
+}
+
+
 //==============================================================================
 // STC64 PRNG, I have extracted it from STC,
 // thus this part is under MIT.

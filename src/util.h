@@ -1,167 +1,25 @@
 #ifndef  KONPU_UTIL_H
 #define  KONPU_UTIL_H
-/* minimal general library and misc. utilities
- * - that we used throughout the project,
- * - and/or that we wish to provide to users.
+#include "platform.h"
+#include "c.h"
+
+/* - misc. macro or utilities used throughout the project,
+ *                            or that we wish to provide to users.
  */
 
-#include "config.h"  // user's config (we always want this)
 
+//===< time >===================================================================
 
-//===< C STANDARD >=============================================================
-
-#if (! defined(__STDC_VERSION__)) || (__STDC_VERSION__ < 199901L)
-#   error "We expect a compiler which conforms to C99 (or later) standard"
-#endif
-
-//===</ C STANDARD >============================================================
-
-
-
-//===< "FREESTANDING" C >=======================================================
-// (minimal) includes from the C standard library: those includes should be
-// headers-only files which are safe to include even if we decide not to link
-// with libc:
-
-// C99:
-#include <float.h>
-// #include <iso646.h>
-#include <limits.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-
-// C11:
-// #include <stdalign.h>
-// #include <stdnoreturn.h>
-
-// upcoming C23:
-// #include <stdbit.h>
-
-//===</ "FREESTANDING" C >======================================================
-
-
-
-//===< VARIADIC OVERLOADING >===================================================
-// Utilities using variadic macros.
-// The most important one is UTIL_OVERLOAD, which supports macros/functions
-// "overloading" based on the number of parameters.  (note: C11 can also do type
-//                          overloading with _Generic, but that's another story)
-
-// UTIL_EXPAND is a macro used to trigger macro expansion while concatenating
-// its parameters. It can be useful to use to create other macros.
-#define UTIL_EXPAND(item, ...)   UTIL_CAT(item, __VA_ARGS__)
-#define UTIL_CAT(item, ...)      item##__VA_ARGS__
-
-// UTIL_COUNT expands to the number of its arguments (works for 1-50 parameters)
-#define UTIL_COUNT(...)                         \
-        UTIL_51TH_ARG(__VA_ARGS__,              \
-        50, 49, 48, 47, 46, 45, 44, 43, 42, 41, \
-        40, 39, 38, 37, 36, 35, 34, 33, 32, 31, \
-        30, 29, 28, 27, 26, 25, 24, 23, 22, 21, \
-        20, 19, 18, 17, 16, 15, 14, 13, 12, 11, \
-        10,  9,  8,  7,  6,  5,  4,  3,  2,  1, 0, UTIL_COUNT__TOO_MANY_ARGS)
-        // macro that expands to its 51th argument
-        // (this is meant to be called from UTIL_COUNT)
-        #define UTIL_51TH_ARG(                                    \
-                N01, N02, N03, N04, N05, N06, N07, N08, N09, N10, \
-                N11, N12, N13, N14, N15, N16, N17, N18, N19, N20, \
-                N21, N22, N23, N24, N25, N26, N27, N28, N29, N30, \
-                N31, N32, N33, N34, N35, N36, N37, N38, N39, N40, \
-                N41, N42, N43, N44, N45, N46, N47, N48, N49, N50, \
-                N, ...)  N
-
-// UTIL_OVERLOAD is a macro that performs "variadic overloading"
-// [ it expands to the name of a given function prefixed by _N_
-//   (where N is the number of arguments) and applies its argument to it ]
+// sleep (in milliseconds)
+// *tries* to wait a specified number of milliseconds before returning.
 //
-// Here's an example of variadic overloading:
-//    int myfunction_2_(int a, int b);         // function with two parameters
-//    int myfunction_3_(int a, int b, int c);  // function with three parameters
-// define variadic overload:
-//    #define myfunction(...)  UTIL_OVERLOAD(myfunction, __VA_ARGS__)
-// so now I can call all myfunction_*_ using a unique name:
-//    myfunction(10,20);    // will call myfunction_2_
-//    myfunction(10,20,30); // will call myfunction_3_
-//
-// hint: it's powerful, but don't abuse it, and you don't have to use it at all.
-//
-#define UTIL_OVERLOAD(function, ...) \
-        UTIL_EXPAND(UTIL_EXPAND(function##_, UTIL_COUNT(__VA_ARGS__)), _)(__VA_ARGS__)
+// depending on the platform, this functionality might not be available
+// and thus may return "immediately". On the other hand, if it is implemented,
+// it may dlay a bit longer due to OS scheduling. If milliseconds is <= 0, it
+// returns immediately.
+void sleep_ms(int milliseconds);
 
-//===< VARIADIC OVERLOADING >===================================================
-
-
-
-//===< unreachable() >==========================================================
-//
-// The C23+ function-like macro unreachable(). It results in undefined behaviour
-// if executed. So, you should ensure your code doesn't execute unreachable().
-// It may be used as an optimization as the compiler can use this to optimize
-// impossible code branches away.
-//
-// For example, if we know *for sure*, 3 < val <= 0, we can do:
-// switch (val) {
-//   case 0: ... break;
-//   case 1: ... break;
-//   case 2: ... break;
-//   default: unreachable();
-// }
-// and compiler may do a simple lookup with no other testing
-
-#if (__STDC_VERSION__ > 201710L)
-    // ^^-- >C17, ie C23 or later. unreachable() was defined in <stddef.h>
-#
-#elif defined(__GNUC__)
-#   define unreachable()   (__builtin_unreachable())
-#elif defined(_MSC_VER) // MSVC
-#   define unreachable()   (__assume(false))
-#else
-#   define unreachable()   do {} while(0)
-#endif
-//===</ unreachable() >=========================================================
-
-
-//===< ASSERT and STATIC ASSERT >===============================================
-//
-// assert(condition)          the regular C assert macro which evaluates the
-//                            condition (if NDEBUG isn't defined) and terminates
-//                            the program if it's zero.
-//
-// STATIC_ASSERT(condition)   condition is evaluated at compile time and iff
-//                            it's zero, a compile-time error occurs.
-
-// assert(condition);
-#ifndef NDEBUG
-#   include <assert.h>
-    // only includes <assert.h> if we have to, because it might not be a
-    // "freestanding" header as it could need to link to libc code which
-    // will output diagnostic information on the standard error output.
-#else
-#   define  assert(condition) ((void)0)
-#endif
-
-//TODO: we could just use `static_assert` instead of STATIC_ASSERT in UPPER_CASE
-// STATIC_ASSERT(condition);
-// ('static_assert' now exists in C but isn't (fully) defined until C23)
-#if (__STDC_VERSION__ > 201710L)
-    // ^^-- >C17, ie upcoming C23 or later: we already have it as keyword
-#   define STATIC_ASSERT(condition)  static_assert(condition)
-#elif (__STDC_VERSION__ > 199901L) || defined(__GNUC__)
-    // ^^-- strictly superior to C99, thus C11 and C17
-    //      has _Static_assert(expression, message) as a keyword
-    //      (and <assert.h> give it the name static_assert)
-    //      this is defined in GCC too.
-#   define STATIC_ASSERT(condition)  _Static_assert(condition, __LINE__)
-#else
-    // pre-C11 pure C solution
-    // this macro doesn't work inside structs/unions
-#   define STATIC_ASSERT(condition)  \
-           typedef char UTIL_EXPAND(static_assertion_line_, __LINE__) [(condition)? 1 : -1]
-#endif
-
-//===</ ASSERT and STATIC ASSERT >==============================================
+//===</ time >==================================================================
 
 
 //===< FIXED-WIDTH INTEGERS >===================================================
@@ -169,7 +27,7 @@
 // clz     : count leading  zero bits (but: result is undefined if 0)
 // ctz     : count trailing zero bits (but: result is undefined if 0)
 // popcount: count the number of bits set
-// bswap   : swap bits
+// //bswap   : swap bits
 // reverse : reverse every bit
 // hamming : this is the "hamming distance" of two bit sequences,
 //           it counts positions at which the bits differ, ie: the min. number
@@ -177,16 +35,20 @@
 //           It provides a "distance" to tell "how similar" two glyphs are.
 //------------------------------------------------------------------------------
 
-// we assume a byte is 8 bits (which is virtually ture everywhere nowadays)
-//TODO: is this really important?
-#if (CHAR_BIT != 8)
-#   error "byte doesn't have 8 bits (CHAR_BIT != 8)"
-#endif
-
-// bit/byte selection macros:
+// bit/byte selection macros for unsigned integer types
 // - 'x' *MUST* be of a unsigned integer type (otherwise undefined behaviour)
-// - 'n' should be >= 0 and less than the number of bits of the 'uint' type
-#define uint_bit( x, n)             (((x) >>   (n)) & 1U   )
+// - 'n' should be >= 0 and less than the number of bits of the type of x.
+// we consider bit/bytes starting as 0 from the the lowest bit/bytes.
+
+// returns the value (0 or 1) of the nth-bit of x (n in 0..7)
+#define uint_bit( x, n)             (((x) >> (n)) & 1U)
+
+// returns a non-zero value iff the nth-bit of x is set (n in 0..7)
+// note: this can be done with uint_bit(x,n) too,
+//       however, if n is a constant, it might take one op less.
+//#define uint64_bit_isset( x, n)     ((x) & (UINT64_C(1)<<(n)))
+
+
 #define uint_byte(x, n)             (((x) >> 8*(n)) & 0xFFU)
 
 // this macro merges bits from two unsigned integers according to a mask.
@@ -199,24 +61,30 @@
 
 // reverse bits in a byte
 #define byte_reverse(byte) \
-        (((byte) * 0x0202020202ULL & 0x010884422010ULL) % 1023)
+        (((byte) * UINT64_C(0x0202020202) & UINT64_C(0x010884422010)) % 1023)
         // using 3 operations and using 64-bit for * and %), see:
         // http://graphics.stanford.edu/~seander/bithacks.html#ReverseByteWith64BitsDiv
         // The method was attributed to Rich Schroeppel in the Programming Hacks
         // section of Beeler, M., Gosper, R. W., and Schroeppel, R. HAKMEM.
         // MIT AI Memo 239, Feb. 29, 1972.
         // (code snippet is in the public domain)
+// TODO:remove this line:        (((byte) * 0x0202020202ULL & 0x010884422010ULL) % 1023)
 
-#if (defined(__GNUC__) || defined(__clang__))
+
+#if defined(__GNUC__) || defined(__clang__)
     // might not be optimal for mere bytes,
     // but if it's almost just one assembly instructions, it's fine.
     #define byte_clz(x)                __builtin_clz((x) << 24)
-                                       /*^FIXME*/ STATIC_ASSERT(sizeof(int)==4);
+                                       /*^FIXME*/ static_assert(sizeof(int)==4);
                                        //'------- I'm adding the 24 so the byte
                                        //         is in leading position as we
                                        //         assumes int is 32 bits. OUCH!
     #define byte_ctz(x)                __builtin_ctz(x)
     #define byte_popcount(x)           __builtin_popcount(x)
+#elif __STDC_VERSION__ > 201710L       // C23 or later
+    #define byte_clz(x)                stdc_leading_zeros((unsigned char)(x))
+    #define byte_ctz(x)                stdc_trailing_zeros((unsigned char)(x))
+    #define byte_popcount(x)           stdc_count_ones((unsigned char)(x))
 #else
     # error "clz/ctz/popcount for bytes rely on GCC/CLANG builtins"
     // SOMEDAY/MAYBE: provide portable C implementation,
@@ -224,49 +92,61 @@
 #endif
 
 // 'int' is garantueed to be at minimum 16-bit
-#define UINT16(literal)                ((uint16_t)##literal)
-#if (defined(__GNUC__) || defined(__clang__))
+#if defined(__GNUC__) || defined(__clang__)
 //  #define uint16_clz(x)              __builtin_clz(x) // would only work if int is exactly 16 bits
     #define uint16_ctz(x)              __builtin_ctz(x)
     #define uint16_popcount(x)         __builtin_popcount(x)
-    #define uint16_bswap(x)            __builtin_bswap16(x)
+    //#define uint16_bswap(x)          __builtin_bswap16(x)
+#elif __STDC_VERSION__ > 201710L       // C23 or later
+    #define uint16_clz(x)              stdc_leading_zeros((uint16_t)(x))
+    #define uint16_ctz(x)              stdc_trailing_zeros((uint16_t)(x))
+    #define uint16_popcount(x)         stdc_count_ones((uint16_t)(x))
 #else
     # error "ctz/popcount/bswap for uint16_t rely on GCC/CLANG builtins"
-    // SOMEDAY/MAYBE: provide portable C implementation.
+    // TODO: SOMEDAY/MAYBE: provide portable C implementation.
 #endif
 #define uint16_hamming_distance(x, y)  uint16_popcount((x) ^ (y));
 
 // 'long' is garantueed to be at minimum 32-bit
-#define UINT32(literal)                ((uint32_t)##literal##UL)
-#if (defined(__GNUC__) || defined(__clang__))
+
+#if defined(__GNUC__) || defined(__clang__)
 //  #define uint32_clz(x)              __builtin_clzl(x)  // would only work if long is exactly 32 bits
     #define uint32_ctz(x)              __builtin_ctzl(x)
     #define uint32_popcount(x)         __builtin_popcountl(x)
-    #define uint32_bswap(x)            __builtin_bswap32(x)
+    //#define uint32_bswap(x)          __builtin_bswap32(x)
+#elif __STDC_VERSION__ > 201710L       // C23 or later
+    #define uint32_clz(x)              stdc_leading_zeros((uint32_t)(x))
+    #define uint32_ctz(x)              stdc_trailing_zeros((uint32_t)(x))
+    #define uint32_popcount(x)         stdc_count_ones((uint32_t)(x))
 #else
     # error "clz/ctz/popcount/bswap for uint32_t rely on GCC/CLANG builtins"
-    // SOMEDAY/MAYBE: provide portable C implementation.
+    // TODO: SOMEDAY/MAYBE: provide portable C implementation.
 #endif
 #define uint32_hamming_distance(x, y)  uint32_popcount((x) ^ (y));
 
 // 'long long' is garantueed to be at minimum 64+ bits
 // (commonly, on 64bit systems, 'long' might be)
-#define UINT64(literal)                ((uint64_t)##literal##ULL)
-#if (defined(__GNUC__) || defined(__clang__))
+#if defined(__GNUC__) || defined(__clang__)
     // long long must be 64+ bits, so use clzll/ctzll instead of clzl/ctzl
     #define uint64_clz(x)              __builtin_clzll(x)
-    // TODO     ^^-^^^--- only works if long long is *exactly* 64 bits
+    // TODO/FIXME  ^^-^^^--- only works if long long is *exactly* 64 bits
     #define uint64_ctz(x)              __builtin_ctzll(x)
     #define uint64_popcount(x)         __builtin_popcountll(x)
-    #define uint64_bswap(x)            __builtin_bswap64(x)
+    //#define uint64_bswap(x)          __builtin_bswap64(x)
+#elif __STDC_VERSION__ > 201710L       // C23 or later
+    #define uint64_clz(x)              stdc_leading_zeros((uint64_t)(x))
+    #define uint64_ctz(x)              stdc_trailing_zeros((uint64_t)(x))
+    #define uint64_popcount(x)         stdc_count_ones((uint64_t)(x))
 #else
+    // TODO: provide portable C implementation.
     # error "clz/ctz/popcount/bswap for uint64_t rely on GCC/CLANG builtins"
-    // SOMEDAY/MAYBE: provide portable C implementation.
-    // (note: under MSVC, _BitScanReverse can be used like clz)
 #endif
 #define uint64_hamming_distance(x, y)  uint64_popcount((x) ^ (y));
 
 //===</ FIXED-WIDTH INTEGERS >==================================================
+
+
+
 
 
 
@@ -373,16 +253,6 @@ static inline double stc64_randomf(stc64_rng* rng) {
 
 //===< MISC. >==================================================================
 
-// Hints to give the compiler to favour the "likely" side of a branch.
-// see: https://stackoverflow.com/questions/109710/how-do-the-likely-unlikely-macros-in-the-linux-kernel-work-and-what-is-their-ben
-#if (defined(__GNUC__) || defined(__clang__))
-#   define likely(condition)    __builtin_expect((condition), 1)
-#   define unlikely(condition)  __builtin_expect((condition), 0)
-#else
-#   define likely(condition)    (condition)
-#   define unlikely(condition)  (condition)
-#endif
-
 // compile-time constant of type size_t representing the number of elements of
 // the given array. ONLY USE ON ARRAYS with size known at compile time (no VLAs)
 // DON'T USE ON POINTERS (hint: arrays received as parameters decay to pointers)
@@ -403,7 +273,7 @@ static inline double stc64_randomf(stc64_rng* rng) {
 //    #define UTIL_SWAP(T, x, y) do { T tmp = (x); (x) = (y); (y) = tmp; } while (0)
 // but we can remove this redundant parameter.
 //
-#if (__STDC_VERSION__ > 201710L)
+#if __STDC_VERSION__ > 201710L
     // ^^-- strictly superior to C17, ie the (as-of-today) upcoming C23 and
     //      later versions which would have "native" typeof (and static_assert)
 #   define UTIL_SWAP(x, y) do                            \
@@ -414,7 +284,7 @@ static inline double stc64_randomf(stc64_rng* rng) {
            } while (0)
 #elif (defined(__GNUC__) || defined(__clang__))
 #   define UTIL_SWAP(x, y) do                            \
-           { STATIC_ASSERT(__builtin_types_compatible_p(__typeof__((x)), __typeof__((y)))); \
+           { static_assert(__builtin_types_compatible_p(__typeof__((x)), __typeof__((y)))); \
              __typeof__((x)) tmp = (x);                  \
              (x) = (y);                                  \
              (y) = tmp;                                  \
@@ -431,6 +301,5 @@ static inline double stc64_randomf(stc64_rng* rng) {
 #endif
 
 //===</ MISC. >=================================================================
-
 
 #endif //KONPU_UTIL_H
