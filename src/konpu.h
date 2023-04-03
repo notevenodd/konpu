@@ -1,0 +1,23 @@
+#include "platform.h"
+#include "c.h"
+#include "util.h"
+#include "glyph.h"
+#include "rect.h"
+#include "canvas.h"
+#include "screen.h"
+#include "font.h"
+#include "print.h"
+#include "renderer_SDL2.h"
+#include "renderer_c_ppm.h"
+#include "renderer_c_pseudographics.h"
+
+#ifdef KONPU_IMPLEMENTATION
+#   include "util.c"
+#   include "canvas.c"
+#   include "screen.c"
+#   include "font.c"
+#   include "print.c"
+#   include "renderer_SDL2.c"
+#   include "renderer_c_ppm.c"
+#   include "renderer_c_pseudographics.c"
+#endif //KONPU_IMPLEMENTATION
