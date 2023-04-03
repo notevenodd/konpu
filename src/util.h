@@ -48,8 +48,7 @@ void sleep_ms(int milliseconds);
 //       however, if n is a constant, it might take one op less.
 //#define uint64_bit_isset( x, n)     ((x) & (UINT64_C(1)<<(n)))
 
-
-#define uint_byte(x, n)             (((x) >> 8*(n)) & 0xFFU)
+#define uint_byte(x, n)             (((x) >> 8*(n)) & 0xffU)
 
 // this macro merges bits from two unsigned integers according to a mask.
 // the mask should contains 0 where bits from x are selected, 1 where from y.
