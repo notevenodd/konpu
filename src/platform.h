@@ -64,19 +64,20 @@
 #      define _POSIX_SOURCE        1
 #   endif
 
-    // _POSIX_C_SOURCE macro: may specify/force conformance to POSIX.
-    // Format is a date corresponding to a revision of the standard.
-#   ifndef _POSIX_C_SOURCE
-#      if KONPU_PLATFORM_POSIX  >= 200809L
-#         define _POSIX_C_SOURCE   200809L  // POSIX 2008
-#      else
-#         define _POSIX_C_SOURCE   200112L
+    // _POSIX_C_SOURCE macro: may specify/force      // Edition Year  Macro
+    // conformance to POSIX. Format is a date        //    1    1988  (N/A)
+    // corresponding to a revision of the standard.  //    2    1990  1
+#   ifndef _POSIX_C_SOURCE                           //    3    1992  2
+#      if KONPU_PLATFORM_POSIX  >= 200809L           //    4    1993  199309L
+#         define _POSIX_C_SOURCE   200809L           //    5    1995  199506L
+#      else                                          //    6    2001  200112L
+#         define _POSIX_C_SOURCE   200112L           //    7    2008  200809L
 #      endif
 #   endif
     // ensure minimum value:
-    // (200112L would be the min baseline for POSIX that can include C99)
+    // (in theory, 200112L would be the min value for POSIX with C99)
 #   if _POSIX_C_SOURCE < 200112L
-#      define _POSIX_C_SOURCE      200112L
+#      define    _POSIX_C_SOURCE   200112L
 #   endif
 
     // _X_OPEN_SOURCE macro: may specify/force conformance to XSI (X/Open System
@@ -90,7 +91,7 @@
 #   endif
     // ensure minimum value:
 #   if _X_OPEN_SOURCE < 500
-#      define _POSIX_C_SOURCE      600
+#      define    _X_OPEN_SOURCE    600
 #   endif
 
 #endif
