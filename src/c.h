@@ -294,28 +294,9 @@
 #   define unreachable()   (__builtin_unreachable())
 #elif defined(_MSC_VER) // MSVC
 #   define unreachable()   (__assume(false))
-/*
-#elif (__STDC_VERSION__ >= 201112L)
-    //TODO/FIXME
-
-    // see: https://en.cppreference.com/w/c/program/unreachable
-    // possible implementation
-
-    // // in C11/C17, undefined behavior will be raised by this non returning empty
-    // // function, this may help the compiler to optimize it away.
-    // static inline _Noreturn unreachable(void) { } // may trigger a warning!!!
-
-    // we can do better than this
-#   define unreachable()   do {} while(0)
-*/
 #else
-    // triggers UB if code gets executed (and hopefully that gives a clue to
-    // compiler to deduce it's unreachable  and optimize something)
-    // hmm... may trigger warning. // TODO: (some pragma magic for gcc)
-
-    static inline _Noreturn unreachable(void) { ((void)(1/0)); }
-
-#   define unreachable()   ((void)(1/0))
+    // triggers UB if code gets executed:
+    static inline _Noreturn void unreachable(void) { *((int*)0) = 1/0; } //volontary UB
 #endif
 //===</ unreachable() >=========================================================
 
