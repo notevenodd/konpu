@@ -1,5 +1,6 @@
 #ifndef  KONPU_RECT_H
 #define  KONPU_RECT_H
+#include "platform.h"
 #include "util.h"
 
 //===< RECTANGLE >==============================================================
@@ -32,8 +33,8 @@ typedef struct rect {
 #if (__STDC_VERSION__ >= 201112L)
             int x;
             int y;
-    union { int w, x1 };
-    union { int h, y1 };
+    union { int w, x1; };
+    union { int h, y1; };
 #else
 /* C99: */         // C99 doesn't allow anonymous unions, thus fields are named
             int x; // only as per the regular representation. It's possible, but
@@ -42,6 +43,7 @@ typedef struct rect {
             int h; // - field .h also corresponds to .y1
 #endif
 } rect;
+
 
 
 // helpers to switch representation between regular (r) and absolute (a):
