@@ -55,20 +55,20 @@ void sleep_ms(int milliseconds);
 #define UINT_MERGE(x, y, mask)      ((x) ^ (((x) ^ (y)) & (mask)))
         // the obvious way would be (x & ~mask) | (y & mask), but this may
         // achieve the same with one operation less.
-        // see: https://graphics.stanford.edu/~seander/bithacks.html#MaskedMerge
-        // (sent there by Ron Jeffery)  (code snippet is in the public domain)
+        // Based on "Bit Twiddling Hacks" by Sean Eron Anderson
+        // https://graphics.stanford.edu/~seander/bithacks.html#MaskedMerge
+        // (code snippet is in the public domain)   (sent by Ron Jeffery)
 
 // reverse bits in a byte
 #define byte_reverse(byte) \
         (((byte) * UINT64_C(0x0202020202) & UINT64_C(0x010884422010)) % 1023)
-        // using 3 operations and using 64-bit for * and %), see:
-        // http://graphics.stanford.edu/~seander/bithacks.html#ReverseByteWith64BitsDiv
+        // Based on "Bit Twiddling Hacks" by Sean Eron Anderson
+        // https://graphics.stanford.edu/~seander/bithacks.html#ReverseByteWith64BitsDiv
+        // (code snippet is in the public domain)
+        // This uses three 64-bits operations (&, *, and %)
         // The method was attributed to Rich Schroeppel in the Programming Hacks
         // section of Beeler, M., Gosper, R. W., and Schroeppel, R. HAKMEM.
         // MIT AI Memo 239, Feb. 29, 1972.
-        // (code snippet is in the public domain)
-// TODO:remove this line:        (((byte) * 0x0202020202ULL & 0x010884422010ULL) % 1023)
-
 
 #if defined(__GNUC__) || defined(__clang__)
     // might not be optimal for mere bytes,

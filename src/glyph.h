@@ -302,17 +302,13 @@ static inline  int       glyph_width       (uint64_t glyph); // width of a glyph
 //        - so sometimes, you might be interested in "8 - ...margin..." instead
 //          of the true width/height of a glyph.
 
-// transformations: flips
+// glyph flips and n*90-degrees rotations (angles are measured counterclockwise)
 static inline  uint64_t  glyph_flip         (uint64_t glyph); // flip along -
 static inline  uint64_t  glyph_mirror       (uint64_t glyph); // flip along |
-static inline  uint64_t  glyph_transpose    (uint64_t glyph); // flip along \. //TODO
-static inline  uint64_t  glyph_antiTranspose(uint64_t glyph); // flip along /  //TODO
-
-// transformations: rotations by 90, 180, or 270 degrees
-// (angles are measured counterclockwise)
-static inline  uint64_t  glyph_rotate90     (uint64_t glyph); // 90 deg clockwise //TODO
-static inline  uint64_t  glyph_rotate180    (uint64_t glyph); // 180 degrees
-static inline  uint64_t  glyph_rotate270    (uint64_t glyph); // 90 deg counter clockwise //TODO
+static inline  uint64_t  glyph_transpose    (uint64_t glyph); // flip along \.
+static inline  uint64_t  glyph_rotate90     (uint64_t glyph); //  90deg rotation
+static inline  uint64_t  glyph_rotate180    (uint64_t glyph); // 180deg rotation
+static inline  uint64_t  glyph_rotate270    (uint64_t glyph); // 270deg rotation
 
 // transformations: shifts
 static inline uint64_t  glyph_shiftLeft     (uint64_t glyph, unsigned n);
@@ -364,56 +360,51 @@ static inline int glyph_width(uint64_t glyph)
    }
 }
 
-/* flips */
+/* flips / transposition / rotations */
+// inspiration for implementation: Hacker's Delight +
+// https://stackoverflow.com/questions/1667591/rotating-a-bitmap-90-degrees
 
-static inline uint64_t
-glyph_flip(uint64_t glyph) {
-   return (uint_byte(glyph, 0) << 7*8) | (uint_byte(glyph, 1) << 6*8) |
-          (uint_byte(glyph, 2) << 5*8) | (uint_byte(glyph, 3) << 4*8) |
-          (uint_byte(glyph, 4) << 3*8) | (uint_byte(glyph, 5) << 2*8) |
-          (uint_byte(glyph, 6) << 1*8) | (uint_byte(glyph, 7) << 0*8) ;
+static inline uint64_t glyph_flip(uint64_t glyph)
+{  glyph = ((glyph & GLYPH(ffffffff00000000)) >> 32) | ((glyph & GLYPH(00000000ffffffff)) << 32);
+   glyph = ((glyph & GLYPH(ffff0000ffff0000)) >> 16) | ((glyph & GLYPH(0000ffff0000ffff)) << 16);
+   glyph = ((glyph & GLYPH(ff00ff00ff00ff00)) >>  8) | ((glyph & GLYPH(00ff00ff00ff00ff)) <<  8);
+   return glyph;
 }
-static inline uint64_t
-glyph_mirror(uint64_t glyph) {
-   return (byte_reverse(uint_byte(glyph, 0)) << 0*8) |
-          (byte_reverse(uint_byte(glyph, 1)) << 1*8) |
-          (byte_reverse(uint_byte(glyph, 2)) << 2*8) |
-          (byte_reverse(uint_byte(glyph, 3)) << 3*8) |
-          (byte_reverse(uint_byte(glyph, 4)) << 4*8) |
-          (byte_reverse(uint_byte(glyph, 5)) << 5*8) |
-          (byte_reverse(uint_byte(glyph, 6)) << 6*8) |
-          (byte_reverse(uint_byte(glyph, 7)) << 7*8) ;
+
+static inline uint64_t glyph_mirror(uint64_t glyph)
+{  glyph = ((glyph & GLYPH(f0f0f0f0f0f0f0f0)) >> 4) | ((glyph & GLYPH(0f0f0f0f0f0f0f0f)) << 4);
+   glyph = ((glyph & GLYPH(cccccccccccccccc)) >> 2) | ((glyph & GLYPH(3333333333333333)) << 2);
+   glyph = ((glyph & GLYPH(aaaaaaaaaaaaaaaa)) >> 1) | ((glyph & GLYPH(5555555555555555)) << 1);
+   return glyph;
 }
 
 static inline uint64_t  glyph_transpose(uint64_t glyph) {
-   (void) glyph; return GLYPH_TODO; // TODO
+   // Based on "Hacker's Delight" (second edition) by Henry S. Warren, Jr.
+   // https://web.archive.org/web/20190915025154/http://www.hackersdelight.org/
+   // https://en.wikipedia.org/wiki/Hacker%27s_Delight
+   glyph = ( glyph        & GLYPH(aa55aa55aa55aa55)       ) |
+           ((glyph        & GLYPH(00aa00aa00aa00aa)) << 7 ) |
+           ((glyph >> 7)  & GLYPH(00aa00aa00aa00aa)       ) ;
+   glyph = ( glyph        & GLYPH(cccc3333cccc3333)       ) |
+           ((glyph        & GLYPH(0000cccc0000cccc)) << 14) |
+           ((glyph >> 14) & GLYPH(0000cccc0000cccc)       ) ;
+   glyph = ( glyph        & GLYPH(f0f0f0f00f0f0f0f)       ) |
+           ((glyph        & GLYPH(00000000f0f0f0f0)) << 28) |
+           ((glyph >> 28) & GLYPH(00000000f0f0f0f0))        ;
+   return glyph;
 }
 
-static inline uint64_t  glyph_antiTranspose(uint64_t glyph) {
-   (void) glyph; return GLYPH_TODO; // TODO
-}
+static inline uint64_t glyph_rotate90(uint64_t glyph)
+{ return glyph_transpose(glyph_mirror(glyph)); }
 
-/* rotations */
+static inline uint64_t glyph_rotate180(uint64_t glyph)
+{ return glyph_mirror(glyph_flip(glyph)); }
 
-static inline uint64_t
-glyph_rotate180(uint64_t glyph) { // 180 degrees = mirror + flip
-   return (byte_reverse(uint_byte(glyph, 0)) << 7*8) |
-          (byte_reverse(uint_byte(glyph, 1)) << 6*8) |
-          (byte_reverse(uint_byte(glyph, 2)) << 5*8) |
-          (byte_reverse(uint_byte(glyph, 3)) << 4*8) |
-          (byte_reverse(uint_byte(glyph, 4)) << 3*8) |
-          (byte_reverse(uint_byte(glyph, 5)) << 2*8) |
-          (byte_reverse(uint_byte(glyph, 6)) << 1*8) |
-          (byte_reverse(uint_byte(glyph, 7)) << 0*8) ;
-}
-static inline uint64_t
-glyph_rotate90(uint64_t glyph) { // 90 degrees counterclockwise
-   (void) glyph; return GLYPH_TODO; // TODO
-}
-static inline uint64_t
-glyph_rotate270(uint64_t glyph) { // 90 degrees clockwise
-   (void) glyph; return GLYPH_TODO; // TODO
-}
+static inline uint64_t glyph_rotate270(uint64_t glyph)
+{ return glyph_transpose(glyph_flip(glyph)); }
+
+
+/* shifts */
 
 static inline uint64_t
 glyph_shiftLeft(uint64_t glyph, unsigned n)
@@ -444,8 +435,8 @@ static inline uint64_t  glyph_swapWidehalves(uint64_t glyph) // swap top/bottom 
 { return (glyph << 32) | (glyph >> 32); }
 
 static inline uint64_t  glyph_swapTallhalves(uint64_t glyph) // swap left/right halves
-{ return glyph & GLYPH(F0F0F0F0F0F0F0F0); }
-//{ return (glyph & GLYPH(F0F0F0F0F0F0F0F0)) | (glyph & GLYPH(0F0F0F0F0F0F0F0F)); }
+{ return glyph & GLYPH(f0f0f0f0f0f0f0f0); }
+//{ return (glyph & GLYPH(f0f0f0f0f0f0f0f0)) | (glyph & GLYPH(0f0f0f0f0f0f0f0f)); }
 
 // (use n=4 to swap top and bottom halves)
 static inline uint64_t  glyph_cycleTop(uint64_t glyph, unsigned n)
