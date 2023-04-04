@@ -5,7 +5,7 @@
 /* - include "platform.h"
  * - checks for C
  * - includes most free-standing (libc independent) C headers,
- * - a few "polyfills" to reach C23 (when possible)
+ * - a few "polyfills" to reach C23 level (when possible)
  * - a few c utilities but possibly without libc (assert, ...)
  * - variadic macro utilities
  */
@@ -302,7 +302,6 @@
 
 
 
-
 //===< assert(condition) >======================================================
 //
 // macro which (may) evaluate a condition and terminates the program if
@@ -365,6 +364,8 @@
 #if __STDC_VERSION__ < 201112L // prior to C11
 #   if defined(__GNUC__)
 #      define thread_local  __thread
+#   elif defined(_MSC_VER)
+#      define thread_local  __declspec(thread)
 #   endif
 #elif __STDC_VERSION__ <= 201710L // C11 and C17
 #   ifndef thread_local // <-- might already be defined from <threads.h>
