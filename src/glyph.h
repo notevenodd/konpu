@@ -135,14 +135,15 @@ uint64_t  tetra_pixelValue(tetra t, int x, int y);
 
 // returns a 0x0N or 0xN0 (with the _H suffix) value,
 // where N is the nibble representing a quadrant's line (line: 0-3)
-#define quadrant_line0(  quadrant)    ((quadrant) >> 12      )
-#define quadrant_line0_H(quadrant)    ((quadrant) >> 8 & 0xF0)
-#define quadrant_line1(  quadrant)    ((quadrant) >> 8 & 0x0F)
-#define quadrant_line1_H(quadrant)    ((quadrant) >> 4 & 0xF0)
-#define quadrant_line2(  quadrant)    ((quadrant) >> 4 & 0x0F)
-#define quadrant_line2_H(quadrant)    ((quadrant)      & 0xF0)
-#define quadrant_line3(  quadrant)    ((quadrant)      & 0x0F)
-#define quadrant_line3_H(  quadrant)  ((quadrant) << 4 & 0x0F)
+
+#define quadrant_line0(  quadrant)    ((quadrant) >> (QUADRANT_WIDTH*3)       )
+#define quadrant_line0_H(quadrant)    ((quadrant) >> (QUADRANT_WIDTH*2) & 0xF0)
+#define quadrant_line1(  quadrant)    ((quadrant) >> (QUADRANT_WIDTH*2) & 0x0F)
+#define quadrant_line1_H(quadrant)    ((quadrant) >> (QUADRANT_WIDTH*1) & 0xF0)
+#define quadrant_line2(  quadrant)    ((quadrant) >> (QUADRANT_WIDTH*1) & 0x0F)
+#define quadrant_line2_H(quadrant)    ((quadrant)                       & 0xF0)
+#define quadrant_line3(  quadrant)    ((quadrant)                       & 0x0F)
+#define quadrant_line3_H(  quadrant)  ((quadrant) << (QUADRANT_WIDTH*1) & 0x0F)
 
 // returns a 0x0N or 0xN0 (with the _H suffix) value,
 // where N is the nibble representing a tall half's line (line: 0-7)
@@ -265,23 +266,23 @@ static inline  uint32_t  tallhalf2(uint16_t top,  uint16_t bottom)
 static inline  uint32_t  widehalf2(uint16_t left, uint16_t right)
 { //      v-- just to make the computation happens in at least 32 bits
   //          as we shift by 24 bits ------------------------------------v
-  return (uint32_t)( quadrant_line0_H(left) | quadrant_line0(right) ) << 3*8 |
-         (uint32_t)( quadrant_line1_H(left) | quadrant_line1(right) ) << 2*8 |
-                   ( quadrant_line2_H(left) | quadrant_line2(right) ) << 1*8 |
-                   ( quadrant_line3_H(left) | quadrant_line3(right) ) << 0*8 ;
+  return (uint32_t)( quadrant_line0_H(left) | quadrant_line0(right) ) << 3*WIDEHALF_WIDTH |
+         (uint32_t)( quadrant_line1_H(left) | quadrant_line1(right) ) << 2*WIDEHALF_WIDTH |
+                   ( quadrant_line2_H(left) | quadrant_line2(right) ) << 1*WIDEHALF_WIDTH |
+                   ( quadrant_line3_H(left) | quadrant_line3(right) ) << 0*WIDEHALF_WIDTH ;
 }
 
 static inline  uint64_t  glyph4(uint16_t top_left   , uint16_t top_right,
                                 uint16_t bottom_left, uint16_t bottom_right)
 {
-  return (uint64_t)( quadrant_line0_H(top_left)    | quadrant_line0(top_right)    ) << 7*8 |
-         (uint64_t)( quadrant_line1_H(top_left)    | quadrant_line1(top_right)    ) << 6*8 |
-         (uint64_t)( quadrant_line2_H(top_left)    | quadrant_line2(top_right)    ) << 5*8 |
-         (uint64_t)( quadrant_line3_H(top_left)    | quadrant_line3(top_right)    ) << 4*8 |
-         (uint64_t)( quadrant_line0_H(bottom_left) | quadrant_line0(bottom_right) ) << 3*8 |
-         (uint64_t)( quadrant_line1_H(bottom_left) | quadrant_line1(bottom_right) ) << 2*8 |
-                   ( quadrant_line2_H(bottom_left) | quadrant_line2(bottom_right) ) << 1*8 |
-                   ( quadrant_line3_H(bottom_left) | quadrant_line3(bottom_right) ) << 0*8 ;
+  return (uint64_t)( quadrant_line0_H(top_left)    | quadrant_line0(top_right)    ) << 7*GLYPH_WIDTH |
+         (uint64_t)( quadrant_line1_H(top_left)    | quadrant_line1(top_right)    ) << 6*GLYPH_WIDTH |
+         (uint64_t)( quadrant_line2_H(top_left)    | quadrant_line2(top_right)    ) << 5*GLYPH_WIDTH |
+         (uint64_t)( quadrant_line3_H(top_left)    | quadrant_line3(top_right)    ) << 4*GLYPH_WIDTH |
+         (uint64_t)( quadrant_line0_H(bottom_left) | quadrant_line0(bottom_right) ) << 3*GLYPH_WIDTH |
+         (uint64_t)( quadrant_line1_H(bottom_left) | quadrant_line1(bottom_right) ) << 2*GLYPH_WIDTH |
+                   ( quadrant_line2_H(bottom_left) | quadrant_line2(bottom_right) ) << 1*GLYPH_WIDTH |
+                   ( quadrant_line3_H(bottom_left) | quadrant_line3(bottom_right) ) << 0*GLYPH_WIDTH ;
 }
 
 // TODO.... all the functions...
@@ -329,19 +330,21 @@ static inline uint64_t  glyph_shiftBottom   (uint64_t glyph, unsigned n);
 /* glyph measurements */
 
 static inline int glyph_marginTop(uint64_t glyph)
-{ return (glyph)? (uint64_clz(glyph) / 8) : 8; }
+{ return (glyph)? (uint64_clz(glyph) / GLYPH_HEIGHT) : GLYPH_HEIGHT; }
 
 static inline int glyph_marginBottom(uint64_t glyph)
-{ return (glyph)? (uint64_ctz(glyph) / 8) : 8; }
+{ return (glyph)? (uint64_ctz(glyph) / GLYPH_HEIGHT) : GLYPH_HEIGHT; }
 
 static inline int glyph_height(uint64_t glyph)
-{ return (glyph)? (8 - (uint64_clz(glyph) / 8) - (uint64_ctz(glyph) / 8)) : 0; }
+{ return (glyph)? (GLYPH_HEIGHT - (uint64_clz(glyph) / GLYPH_HEIGHT) - (uint64_ctz(glyph) / GLYPH_HEIGHT)) : 0; }
 
 // binary-OR combines all the line-bytes of the glyph into a byte
 static inline unsigned char
 glyph_flatten(uint64_t glyph) {
-   return ((glyph >> 8*7) | (glyph >> 8*6) | (glyph >> 8*5) | (glyph >> 8*4) |
-           (glyph >> 8*3) | (glyph >> 8*2) | (glyph >> 8*1) | (glyph >> 8*0) );
+   return ((glyph  >>  GLYPH_WIDTH * 7) | (glyph  >>  GLYPH_WIDTH * 6) |
+           (glyph  >>  GLYPH_WIDTH * 5) | (glyph  >>  GLYPH_WIDTH * 4) |
+           (glyph  >>  GLYPH_WIDTH * 3) | (glyph  >>  GLYPH_WIDTH * 2) |
+           (glyph  >>  GLYPH_WIDTH * 1) | (glyph  >>  GLYPH_WIDTH * 0) );
 }
 
 static inline int glyph_marginLeft(uint64_t glyph)
@@ -354,7 +357,7 @@ static inline int glyph_width(uint64_t glyph)
 {
    if (glyph) {
       unsigned char line = glyph_flatten(glyph);
-      return 8 - byte_clz(line) - byte_ctz(line);
+      return GLYPH_WIDTH - byte_clz(line) - byte_ctz(line);
    } else {
       return 0;
    }
