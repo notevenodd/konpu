@@ -1,12 +1,12 @@
-.PHONY: all clean cleanall examples #src
+.PHONY: all clean cleanall examples src
 
 all: examples
 
 examples:
 	cd examples && $(MAKE) all
 
-#src:
-#	cd src && $(MAKE) all
+src:
+	cd src && $(MAKE) all
 
 clean:
 	cd src      && $(MAKE) clean
