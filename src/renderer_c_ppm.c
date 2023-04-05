@@ -25,21 +25,21 @@
 void canvas_render_ppm(const_canvas cvas)
 {  CANVAS_ASSERT(cvas);
 
-   printf("P6\n%d %d\n255\n", 8 * KONPU_RENDERER_PPM_ZOOM_X * cvas.width,
-                              8 * KONPU_RENDERER_PPM_ZOOM_Y * cvas.height);
+   printf("P6\n%d %d\n255\n", KONPU_RENDERER_PPM_ZOOM_X * GLYPH_WIDTH  * cvas.width,
+                              KONPU_RENDERER_PPM_ZOOM_Y * GLYPH_HEIGHT * cvas.height);
 
-   for (int y = 0; y < 8 * cvas.height; y++) {
+   for (int y = 0; y < GLYPH_HEIGHT * cvas.height; y++) {
        for (int ny = 0; ny < KONPU_RENDERER_PPM_ZOOM_Y; ny++) {
            for (int x = 0; x < cvas.width; x++) {
-               uint64_t glyph = CANVAS_GLYPH(cvas, x, y/8);
-               unsigned char line = glyph_line(glyph, y%8);
+               uint64_t glyph = canvas_glyph(cvas, x, y/GLYPH_HEIGHT);
+               unsigned char line = glyph_line(glyph, y%GLYPH_HEIGHT);
 
                // TODO: read some color "attributes" for cell(x,y).
                //       fake it for now.
                static int FG_R = 0xFF, FG_G = 0xFF, FG_B = 0x00;
                static int BG_R = 0x00, BG_G = 0x00, BG_B = 0x80;
 
-               for (int i = 7; i >= 0; i--) {
+               for (int i = GLYPH_WIDTH - 1; i >= 0; i--) {
                    if (line & (1 << i)) {
                       for (int nx = 0; nx < KONPU_RENDERER_PPM_ZOOM_X; nx++) {
                           putchar(FG_R); putchar(FG_G); putchar(FG_B);

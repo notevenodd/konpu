@@ -23,7 +23,7 @@ void print_quadrant(canvas cvas, int x, int y, const char* str)
    y /= 2;
 
    uint16_t  q_left = 0;
-   uint64_t *glyph = CANVAS_GLYPH_PTR(cvas, x,y);
+   uint64_t *glyph = canvas_glyphPointer(cvas, x,y);
 
    for (; *str != '\0'; str++) {
        unsigned char c = *str;
@@ -31,7 +31,7 @@ void print_quadrant(canvas cvas, int x, int y, const char* str)
 
        if (left) {
           q_left = q;
-          glyph  = CANVAS_GLYPH_PTR(cvas, x,y);
+          glyph  = canvas_glyphPointer(cvas, x,y);
           left   = false;
        } else {
           // before writing the quadrant, check if cursor is at a correct

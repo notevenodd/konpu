@@ -18,25 +18,29 @@ typedef canvas const_canvas;
 // on the canvas. Of course, it means nothing, the compiler will not check.
 
 
-// macros for *direct* access to glyphs (or their numerical index):
-// GLYPH and GLYPH_PTR macros can serve as either a rvalue or lvalue
-// they do no bound checking, so use responsibly.
-#define CANVAS_GLYPH(canvas, x,y)       (*CANVAS_GLYPH_PTR((canvas), (x),(y)))
-#define CANVAS_GLYPH_IDX(canvas, x,y)   ((x) + (y) * (canvas).stride)
-#define CANVAS_GLYPH_PTR(canvas, x,y)   ((canvas).glyphs + CANVAS_GLYPH_IDX((canvas), (x),(y)))
+
+
+// macros and functions for *direct* access to glyphs (or their numerical index)
+// those do NOT do any bound checking, use responsibly.
+// (we also do not use assert() ~ although it's rare, one might want to write
+//                                beyond the edge of a window on purpose)
+// canvas_glyph and canvas_glyphPointer can serve either as a rvalue or lvalue
+#define                  canvas_glyph(canvas, x,y)                        (*canvas_glyphPointer((canvas), (x),(y)))
+#define                  canvas_glyphIndex(canvas, x,y)                   ((x) + (y) * (canvas).stride)
+static inline uint64_t*  canvas_glyphPointer(canvas cvas, int x, int y)   { return cvas.glyphs + canvas_glyphIndex(cvas, x ,y); }
 
 
 // SET or BLEND a GLYPH at position (x,y)
 // --------------------------------------
 //
 // * Set whole glyph as-is:
-//   copy   : CANVAS_GLYPH(canvas, x,y)  =  glyph;
+//   copy   : canvas_glyph(canvas, x,y)  =  glyph;
 //
 // * Blend using the set pixels of the glyph:
 //   with the following effects on the canvas pixels:
-//   - set    : CANVAS_GLYPH(canvas, x,y) |=  glyph;
-//   - unset  : CANVAS_GLYPH(canvas, x,y) &= ~glyph;
-//   - toggle : CANVAS_GLYPH(canvas, x,y) ^= ~glyph;
+//   - set    : canvas_glyph(canvas, x,y) |=  glyph;
+//   - unset  : canvas_glyph(canvas, x,y) &= ~glyph;
+//   - toggle : canvas_glyph(canvas, x,y) ^= ~glyph;
 //
 // * Blend using a mask:
 //   uint64_t mask; // contains 1 where bits from the glyph are selected
@@ -48,13 +52,37 @@ typedef canvas const_canvas;
 // --------------------------
 //
 //   - Query the value:
-//     bool lit = uint_bit(CANVAS_GLYPH(canvas, x/8, y/8),
+//     bool lit = uint_bit(canvas_glyph(canvas, x/8, y/8),
 //                         glyph_pixel_idx(x%8, y%8));
 //
 //   - Set/Unset/Toggle pixel(x,y)
-//     - set    : CANVAS_GLYPH(canvas, x/8, y/8) |=  glyph_pixel(x%8, y%8);
-//     - unset  : CANVAS_GLYPH(canvas, x/8, y/8) &= ~glyph_pixel(x%8, y%8);
-//     - toggle : CANVAS_GLYPH(canvas, x/8, y/8) ^= ~glyph_pixel(x%8, y%8);
+//     - set    : canvas_glyph(canvas, x/8, y/8) |=  glyph_pixel(x%8, y%8);
+//     - unset  : canvas_glyph(canvas, x/8, y/8) &= ~glyph_pixel(x%8, y%8);
+//     - toggle : canvas_glyph(canvas, x/8, y/8) ^= ~glyph_pixel(x%8, y%8);
+
+
+#define canvas_glyphFromPixel(canvas, x, y)           canvas_glyph(       (canvas), (x) / GLYPH_WIDTH, (y) / GLYPH_HEIGHT)
+#define canvas_glyphPointerFromPixel(canvas, x, y)    canvas_glyphPointer((canvas), (x) / GLYPH_WIDTH, (y) / GLYPH_HEIGHT)
+#define canvas_glyphIndexFromPixel(canvas, x, y)      canvas_glyphIndex(  (canvas), (x) / GLYPH_WIDTH, (y) / GLYPH_HEIGHT)
+
+// ^ #define canvas_getGlyphIndexFromPixel(canvas, x, y)   canvas_glyphIndex(  (canvas), (x) / GLYPH_WIDTH, (y) / GLYPH_HEIGHT)
+//   todo canvas_glyphIndex => canvas_getGlyphIndex
+// #define canvas_getDotFromPixel(x, y)               glyph_fromPixel((x) % GLYPH_WIDTH, (y) % GLYPH_HEIGHT); }
+
+// #define canvas_setPixelValue
+// #define canvas_getPixelValue
+// #define canvas_hasPixel
+// #define canvas_setPixel
+// #define canvas_unsetPixel
+
+
+
+
+static inline void  canvas_setPixel(canvas cvas, int x, int y)       { canvas_glyphFromPixel(cvas, x, y) |=  glyph_fromPixel(x % GLYPH_WIDTH, y % GLYPH_HEIGHT); }
+static inline void  canvas_unsetPixel(canvas cvas, int x, int y)     { canvas_glyphFromPixel(cvas, x, y) &= ~glyph_fromPixel(x % GLYPH_WIDTH, y % GLYPH_HEIGHT); }
+static inline void  canvas_tooglePixel(canvas cvas, int x, int y)    { canvas_glyphFromPixel(cvas, x, y) ^= ~glyph_fromPixel(x % GLYPH_WIDTH, y % GLYPH_HEIGHT); }
+
+
 
 
 
@@ -130,13 +158,13 @@ static inline bool canvas_isnull(canvas cvas)
 static inline uint64_t
 canvas_at(canvas cvas, int x, int y)
 { return (canvas_isnull(cvas) || x >= cvas.width || y >= cvas.height) ?
-         CANVAS_GLYPH(cvas, x,y) : 0; }
+         canvas_glyph(cvas, x,y) : 0; }
 
 static inline bool
 canvas_putglyph(canvas cvas, uint64_t glyph, int x, int y)
 {  if (canvas_isnull(cvas) || x >= cvas.width || y >= cvas.height)
       return false;
-   CANVAS_GLYPH(cvas, x,y) = glyph;
+   canvas_glyph(cvas, x,y) = glyph;
    return true;
 }
 
@@ -145,7 +173,7 @@ canvas_crop(canvas cvas, rect crop_area)
 {  CANVAS_ASSERT(cvas);
 
    if (rect_clip(&crop_area, cvas.width, cvas.height)) {
-      cvas.glyphs += CANVAS_GLYPH_IDX(cvas, crop_area.x, crop_area.y),
+      cvas.glyphs += canvas_glyphIndex(cvas, crop_area.x, crop_area.y),
       cvas.width   = crop_area.w;
       cvas.height  = crop_area.h;
       return cvas;
@@ -163,11 +191,12 @@ canvas_set(canvas cvas, uint64_t glyph)
 {  CANVAS_ASSERT(cvas);
    for (int y = 0; y < cvas.height; y++)
        for (int x = 0; x < cvas.width; x++)
-           CANVAS_GLYPH(cvas, x,y) = glyph;
+           canvas_glyph(cvas, x,y) = glyph;
 }
 
 
 // draw a line on the given canvas between the points (x0,y0) and (x1,y1)
 void canvas_line(canvas cvas, int x0, int y0, int x1, int y1);
+
 
 #endif //KONPU_CANVAS_H

@@ -3,7 +3,12 @@
 // TODO/FIXME: __builtin_abs is a gcc/clang builtin
 //             `int abs(int z)` is otherwise from <stdlib.h>
 //             so, TODO => macro wrap those properly somewhere
-#define abs(x)  __builtin_abs((x))
+
+#if defined(EXIT_FAILURE) && defined(EXIT_SUCCESS) && defined(MB_CUR_MAX) && defined(NULL) && defined(RAND_MAX)
+    // if we have all those, then it means we have included <stdlib.h>
+#else
+#   define abs(x)  __builtin_abs((x))
+#endif
 
 void canvas_line(canvas cvas, int x0, int y0, int x1, int y1)
 {  CANVAS_ASSERT(cvas);
@@ -38,7 +43,7 @@ void canvas_line(canvas cvas, int x0, int y0, int x1, int y1)
           y0 >= 0  &&  y0 < GLYPH_HEIGHT * cvas.height) {
          // TODO: after implementing canvas_pixel* macros/inline funcs
          //       remove this ugly expression
-         CANVAS_GLYPH(cvas, x0 / 8, y0 / 8) |= glyph_fromPixel(x0 % 8, y0 % 8);
+         canvas_glyph(cvas, x0 / 8, y0 / 8) |= glyph_fromPixel(x0 % 8, y0 % 8);
       }
 
       if (x0 == x1 && y0 == y1) break;

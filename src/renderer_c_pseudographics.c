@@ -21,7 +21,7 @@ void canvas_render_fullblocks(const_canvas cvas)
        for (int x = 0; x < GLYPH_HEIGHT * cvas.width; x++) {
 
            // get a position for pixel (x,y):
-           uint64_t glyph = CANVAS_GLYPH(cvas, x / GLYPH_WIDTH, y / GLYPH_HEIGHT);
+           uint64_t glyph = canvas_glyph(cvas, x / GLYPH_WIDTH, y / GLYPH_HEIGHT);
            int n = glyph_pixelIndex(x % GLYPH_WIDTH, y % GLYPH_HEIGHT);
 
            // read pixel value and print space or block accordingly:
@@ -44,7 +44,7 @@ void canvas_render_halfblocks_h(const_canvas cvas)
        for (int x = 0; x < GLYPH_HEIGHT * cvas.width; x++) {
 
            // get a position for pixel (x,y):
-           uint64_t glyph = CANVAS_GLYPH(cvas, x / GLYPH_WIDTH, y / GLYPH_HEIGHT);
+           uint64_t glyph = canvas_glyph(cvas, x / GLYPH_WIDTH, y / GLYPH_HEIGHT);
            int n = glyph_pixelIndex(x % GLYPH_WIDTH, y % GLYPH_HEIGHT);
 
            // print half block
@@ -71,7 +71,7 @@ void canvas_render_halfblocks_v(const_canvas cvas)
        for (int x = 0; x < GLYPH_HEIGHT * cvas.width; x += 2) {
 
            // get a position for pixel (x,y):
-           uint64_t glyph = CANVAS_GLYPH(cvas, x / GLYPH_WIDTH, y / GLYPH_HEIGHT);
+           uint64_t glyph = canvas_glyph(cvas, x / GLYPH_WIDTH, y / GLYPH_HEIGHT);
            int n = glyph_pixelIndex(x % GLYPH_WIDTH, y % GLYPH_HEIGHT);
 
            // print vertical half block
@@ -98,7 +98,7 @@ void canvas_render_quadblocks(const_canvas cvas)
        for (int x = 0; x < GLYPH_HEIGHT * cvas.width; x += 2) {
 
            // get a position for pixel (x,y):
-           uint64_t glyph = CANVAS_GLYPH(cvas, x / GLYPH_WIDTH, y / GLYPH_HEIGHT);
+           uint64_t glyph = canvas_glyph(cvas, x / GLYPH_WIDTH, y / GLYPH_HEIGHT);
            int n = glyph_pixelIndex(x % GLYPH_WIDTH, y % GLYPH_HEIGHT);
 
            // read a half block character and print it out:
@@ -127,7 +127,7 @@ void canvas_render_braille(const_canvas cvas)
        for (int x = 0; x < GLYPH_HEIGHT * cvas.width; x += 2) {
 
            // get a position for pixel (x,y):
-           uint64_t glyph = CANVAS_GLYPH(cvas, x / GLYPH_WIDTH, y / GLYPH_HEIGHT);
+           uint64_t glyph = canvas_glyph(cvas, x / GLYPH_WIDTH, y / GLYPH_HEIGHT);
            int n = glyph_pixelIndex(x % GLYPH_WIDTH, y % GLYPH_HEIGHT);
 
            // Read the 2x4 bit pixels of the braille cell.        0x01 0x08
@@ -169,7 +169,7 @@ void canvas_render_sextants(const_canvas cvas)
        for (int x = 0; x < GLYPH_HEIGHT * cvas.width; x += 2) {
 
            // glyph from which the sextant info comes from ...
-           uint64_t glyph = CANVAS_GLYPH(cvas, x / GLYPH_WIDTH, y / GLYPH_HEIGHT);
+           uint64_t glyph = canvas_glyph(cvas, x / GLYPH_WIDTH, y / GLYPH_HEIGHT);
            int ypos = y % (GLYPH_WIDTH);
            int n = glyph_pixelIndex(x % GLYPH_WIDTH, ypos);
 
@@ -225,7 +225,7 @@ sext = byte_reverse(sext) >> 2;
            // sext = 21 * q + r,
            //  if r != 0  => codepoint is: (0x1FB00 - 1) + 20*q + r
            //             => else sextant is a half block.
-           // in terms of UTF-8, codepoitn 0x1FBxx is easy to compute.
+           // in terms of UTF-8, codepoint 0x1FBxx is easy to compute.
 
            unsigned q = sext / 21;
            if (sext % 21) {
@@ -234,7 +234,7 @@ sext = byte_reverse(sext) >> 2;
               putchar(0xf0); putchar(0x9f); putchar(0xac);
               putchar(128|(sext - q - 1));
            } else {
-              switch(q) { // sext is vertical halves/empy/full
+              switch(q) { // sext is vertical halves/empty/full
                  case 0 : putchar(0x20);          break; // space
                  case 1 : block(); putchar(0x8c); break; // U+258C (left half)
                  case 2 : block(); putchar(0x90); break; // U+2590 (right half)

@@ -129,7 +129,7 @@ bool renderer_sdl2_render(const_canvas cvas)
    // paint the canvas onto the texture's pixels
    for (int y = 0; y < GLYPH_HEIGHT * cvas.height; y++) {
        for (int x = 0; x < cvas.width; x++) {
-           uint64_t glyph = CANVAS_GLYPH(cvas, x, y / GLYPH_HEIGHT);
+           uint64_t glyph = canvas_glyph(cvas, x, y / GLYPH_HEIGHT);
            unsigned char line = glyph_line(glyph, y % GLYPH_HEIGHT);
 
            for (int i = (GLYPH_WIDTH - 1); i >= 0; i--) {

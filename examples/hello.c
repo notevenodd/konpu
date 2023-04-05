@@ -66,31 +66,31 @@ int main(int argc, char **argv)
 
       canvas_set(screen, 0); paint(DELAY);
 
-      CANVAS_GLYPH(screen, 0,0) = GLYPH_SOWELI;  paint(DELAY);
+      canvas_glyph(screen, 0,0) = GLYPH_SOWELI;  paint(DELAY);
 
-      CANVAS_GLYPH(screen, 1,0) = glyph4(chr_quadrant('I'), chr_quadrant('L'),
+      canvas_glyph(screen, 1,0) = glyph4(chr_quadrant('I'), chr_quadrant('L'),
                                          chr_quadrant('K'), chr_quadrant('O')) | GLYPH(ff);
       paint(DELAY);
-      CANVAS_GLYPH(screen, 2,0) = glyph4(chr_quadrant('O'), 0                ,
+      canvas_glyph(screen, 2,0) = glyph4(chr_quadrant('O'), 0                ,
                                          chr_quadrant('N'), chr_quadrant('P'));
       paint(DELAY);
-      CANVAS_GLYPH(screen, 3,0) = glyph4(0                , chr_quadrant('&'),
+      canvas_glyph(screen, 3,0) = glyph4(0                , chr_quadrant('&'),
                                          chr_quadrant('U'), 0);
       paint(DELAY);
 
-      CANVAS_GLYPH(screen,  5,0) = chr('H');  paint(DELAY);
-      CANVAS_GLYPH(screen,  6,0) = chr('E');  paint(DELAY);
-      CANVAS_GLYPH(screen,  7,0) = chr('L');  paint(DELAY);
-      CANVAS_GLYPH(screen,  8,0) = chr('L');  paint(DELAY);
-      CANVAS_GLYPH(screen,  9,0) = chr('O');  paint(DELAY);
+      canvas_glyph(screen,  5,0) = chr('H');  paint(DELAY);
+      canvas_glyph(screen,  6,0) = chr('E');  paint(DELAY);
+      canvas_glyph(screen,  7,0) = chr('L');  paint(DELAY);
+      canvas_glyph(screen,  8,0) = chr('L');  paint(DELAY);
+      canvas_glyph(screen,  9,0) = chr('O');  paint(DELAY);
 
-      CANVAS_GLYPH(screen, 0,2) |= glyph_rotate180(GLYPH_SOWELI);
-      CANVAS_GLYPH(screen, 1,2) |= GLYPH_LI;
-      CANVAS_GLYPH(screen, 2,2) |= glyph_flip(GLYPH_SONA);
-      CANVAS_GLYPH(screen, 0,3) |= GLYPH_JAN;
-      CANVAS_GLYPH(screen, 1,3) |= GLYPH_SONA;
-      CANVAS_GLYPH(screen, 2,3) |= GLYPH_LI;
-      CANVAS_GLYPH(screen, 3,3) |= GLYPH_SUNO;
+      canvas_glyph(screen, 0,2) |= glyph_rotate180(GLYPH_SOWELI);
+      canvas_glyph(screen, 1,2) |= GLYPH_LI;
+      canvas_glyph(screen, 2,2) |= glyph_flip(GLYPH_SONA);
+      canvas_glyph(screen, 0,3) |= GLYPH_JAN;
+      canvas_glyph(screen, 1,3) |= GLYPH_SONA;
+      canvas_glyph(screen, 2,3) |= GLYPH_LI;
+      canvas_glyph(screen, 3,3) |= GLYPH_SUNO;
       paint(DELAY);
 
       canvas_line(screen, -8,8, 100,64);
