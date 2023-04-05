@@ -1,0 +1,86 @@
+# ignore files with extension in examples/ (in three steps)
+# 1. ignore all in examples/
+examples/*
+# 2. unignore all with extensions in examples/
+!examples/*.*
+# 3. unignore all dirs in examples/
+!examples/*/
+
+# for now, the 'konpu' example just a file that includes another example:
+examples/konpu.c
+
+
+#########################
+
+
+# editors stuff:
+# .vscode
+*.swp
+*~
+# (local SDL include files, it's mostly for editor's code completion):
+SDL-include
+
+# temporary stuff, tags file, misc.
+tmp/
+*.tmp
+
+# tags
+# tagsx
+
+
+#########################
+# a standard C .gitignore
+#########################
+
+# Prerequisites
+*.d
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Linker output
+*.ilk
+*.map
+*.exp
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Kernel Module Compile Results
+*.mod*
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
+Mkfile.old
+dkms.conf
