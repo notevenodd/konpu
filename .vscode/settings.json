@@ -1,0 +1,15 @@
+{
+   "makefile.launchConfigurations": [
+      {
+         "cwd": "${workspaceFolder}/examples",
+         "binaryPath": "${workspaceFolder}/examples/konpu",
+         "binaryArgs": []
+      }
+   ],
+   "files.associations": {
+      "platform.h": "c"
+   },
+   "files.exclude": {
+      "**/*.tmp": true
+   }
+}
