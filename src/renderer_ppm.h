@@ -25,8 +25,8 @@
 int rendererPPM_init(int zoomx, int zoomy);
 
 #else
-#   define RENDERER_PPM        0
-#   define rendererPPM_init()  1
+#   define RENDERER_PPM                    0
+#   define rendererPPM_init(zoomx, zoomy)  1
 
 #endif //KONPU_PLATFORM_LIBC
 #endif //KONPU_RENDERER_PPM_H
