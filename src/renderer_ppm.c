@@ -1,59 +1,38 @@
 #include "renderer_ppm.h"
 #if RENDERER_PPM
+#include "renderer.h"
 #include "screen.h"
 #include <stdio.h>
 
-/// @brief KONPU_RENDERER_PPM_STREAM settings:
+// global variables for a PPM renderer:
+static int rendererPPM_zoomx;
+static int rendererPPM_zoomy;
+
+/// @brief RENDERER_PPM_STREAM settings:
 /// By default, the PPM renderer will output to `stdout`, however you
 /// may define another stream by defining this macro constant.
-#ifndef    KONPU_RENDERER_PPM_STREAM
-#   define KONPU_RENDERER_PPM_STREAM   stdout
+#ifndef    RENDERER_PPM_STREAM
+#   define RENDERER_PPM_STREAM   stdout
 #endif
 
-/// @brief KONPU_RENDERER_PPM_UNLOCKED settings:
+/// @brief RENDERER_PPM_UNLOCKED settings:
 /// If this macro constant is defined and Konpu uses the POSIX platform, the PPM
 /// renderer will use the "_unlocked" version of `putc` to output characters.
 /// This may be faster, but is thread-UNSAFE.
-#if defined(KONPU_RENDERER_PPM_UNLOCKED) && KONPU_PLATFORM_POSIX
-#   define KONPU_RENDERER_PPM_PUTC(character, stream) \
+#if defined(RENDERER_PPM_UNLOCKED) && KONPU_PLATFORM_POSIX
+#   define RENDERER_PPM_PUTC(character, stream) \
            putc_unlocked((character), (stream))
 #else
-#   define KONPU_RENDERER_PPM_PUTC(character, stream)  \
+#   define RENDERER_PPM_PUTC(character, stream)  \
            putc((character), (stream))
-#endif
-
-
-/// @brief KONPU_RENDERER_PPM_ZOOM_X and KONPU_RENDERER_PPM_ZOOM_Y settings:
-/// By default, the PPM renderer will zoom the screen 3x. You can change this
-/// by defining those macro variables.
-#ifndef    KONPU_RENDERER_PPM_ZOOM_X
-#   define KONPU_RENDERER_PPM_ZOOM_X 3  // default
-#endif
-#ifndef    KONPU_RENDERER_PPM_ZOOM_Y
-#   define KONPU_RENDERER_PPM_ZOOM_Y 3  // default
-#endif
-// Assuming a dimension with 200 glyphs in one direction, 20*8*200 is max value
-// which wouldn't overflow 15 bits (the max value a int may have if it's 16bits)
-// So let's restrict zoom to that, which is more than enough anway.
-#if (KONPU_RENDERER_PPM_ZOOM_X < 0) || (KONPU_RENDERER_PPM_ZOOM_X > 20)
-#   error "KONPU_RENDERER_PPM_ZOOM_X value is too big"
-#endif
-#if (KONPU_RENDERER_PPM_ZOOM_Y < 0) || (KONPU_RENDERER_PPM_ZOOM_Y > 20)
-#   error "KONPU_RENDERER_PPM_ZOOM_Y value is too big"
 #endif
 
 
 static int
 canvas_renderToPPM(const_canvas cvas, FILE* stream, int zoomx, int zoomy)
 {  CANVAS_ASSERT(cvas);
-   // Assuming a dimension with 200 glyphs in one direction, 20*8*200 is max
-   // value which wouldn't overflow 15 bits (the max value a int may have if
-   // it's 16bits). So let's restrict the zoom values.
-   assert(zoomx >= 0);  assert(zoomx <= 20);
-   assert(zoomy >= 0);  assert(zoomy <= 20);
-
-   printf("P6\n%d %d\n255\n", zoomx * GLYPH_WIDTH  * cvas.width,
-                              zoomy * GLYPH_HEIGHT * cvas.height);
+   fprintf(stream, "P6\n%d %d\n255\n", zoomx * GLYPH_WIDTH  * cvas.width,
+                                       zoomy * GLYPH_HEIGHT * cvas.height);
 
    for (int y = 0; y < GLYPH_HEIGHT * cvas.height; y++) {
        for (int ny = 0; ny < zoomy; ny++) {
@@ -69,15 +48,15 @@ canvas_renderToPPM(const_canvas cvas, FILE* stream, int zoomx, int zoomy)
                for (int i = GLYPH_WIDTH - 1; i >= 0; i--) {
                    if (line & (1 << i)) {
                       for (int nx = 0; nx < zoomx; nx++) {
-                        KONPU_RENDERER_PPM_PUTC(FG_R, stream);
-                        KONPU_RENDERER_PPM_PUTC(FG_G, stream);
-                        KONPU_RENDERER_PPM_PUTC(FG_B, stream);
+                        RENDERER_PPM_PUTC(FG_R, stream);
+                        RENDERER_PPM_PUTC(FG_G, stream);
+                        RENDERER_PPM_PUTC(FG_B, stream);
                       }
                    } else {
                       for (int nx = 0; nx < zoomx; nx++) {
-                        KONPU_RENDERER_PPM_PUTC(BG_R, stream);
-                        KONPU_RENDERER_PPM_PUTC(BG_G, stream);
-                        KONPU_RENDERER_PPM_PUTC(BG_B, stream);
+                        RENDERER_PPM_PUTC(BG_R, stream);
+                        RENDERER_PPM_PUTC(BG_G, stream);
+                        RENDERER_PPM_PUTC(BG_B, stream);
                       }
                    }
                }
@@ -85,27 +64,37 @@ canvas_renderToPPM(const_canvas cvas, FILE* stream, int zoomx, int zoomy)
        }
    }
 
+   // flush the stream and check for errors
    fflush(stream);
-   return 0; // TODO: we haven't checked stdio's errors
+   int err = ferror(stream);
+   if (unlikely(err)) {
+      clearerr(stream);
+      rendererSingleton.error++;
+   }
+   return err;
 }
 
+
 // `render` function for the PPM renderer
-static int rendererPPM_render(void)
+static int
+rendererPPM_render(void)
 {
    // TODO: So, we're just forwarding ...
    //       Maybe a `canvas_renderToPPM` function would make sense it we handle
    //       PPM images somewhere else in the code. But will we?...
-   return canvas_renderToPPM(screen,
-                             KONPU_RENDERER_PPM_STREAM,
-                             KONPU_RENDERER_PPM_ZOOM_X,
-                             KONPU_RENDERER_PPM_ZOOM_Y);
-   // TODO: by the way, KONPU_RENDERER_PPM_ZOOM_X/Y really ought to be
-   //       parameters to the `renderPPM_init` functions, and *NOT* some
-   //       macro constants. Let's fix that.
+   return canvas_renderToPPM(screen, RENDERER_PPM_STREAM,
+                             rendererPPM_zoomx, rendererPPM_zoomy);
 }
 
-int rendererPPM_init(void)
+int rendererPPM_init(int zoomx, int zoomy)
 {
+   // Assuming a dimension with 200 glyphs in one direction, 20*8*200 is max
+   // value which wouldn't overflow 15 bits (the max value a int may have if
+   // it's 16bits). So let's restrict the zoom values to <= 20 (we put a
+   // default value (3) if range is incorrect)
+   if ((zoomx <= 0) || (zoomx > 20))   zoomx = 3;
+   if ((zoomy <= 0) || (zoomy > 20))   zoomy = 3;
+
    // drop the active renderer (we can't do error checking)
    renderer_drop();
    rendererSingleton.error  = 0;

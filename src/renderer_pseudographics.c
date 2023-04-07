@@ -12,6 +12,21 @@
 #   define RENDERER_PSEUDOGRAPHICS_STREAM   stdout
 #endif
 
+// flush the stream and check/return errors
+// if error are found, clean stream, increment renderer's error count
+static int
+rendererPseudoGraphics_fflush()
+{
+   fflush(RENDERER_PSEUDOGRAPHICS_STREAM);
+   int err = ferror(RENDERER_PSEUDOGRAPHICS_STREAM);
+   if (unlikely(err)) {
+      clearerr(RENDERER_PSEUDOGRAPHICS_STREAM);
+      rendererSingleton.error++;
+   }
+   return err;
+}
+
+
 /// @brief RENDERER_PSEUDOGRAPHICS_UNLOCKED settings:
 /// If this macro constant is defined and Konpu uses the POSIX platform, the
 /// PseudoGraphics renderer will use the "_unlocked" version of `putc` to output
@@ -48,6 +63,9 @@
            RENDERER_PSEUDOGRAPHICS_PUTCHAR(0x4a); \
          } while(0)
 
+
+////////////////////////////////////////////////////////////////////////////////
+
 // render screen using "1x1" blocks
 static int rendererPseudoGraphics_renderFullBlocks(void)
 {  CANVAS_ASSERT(screen);
@@ -68,8 +86,7 @@ static int rendererPseudoGraphics_renderFullBlocks(void)
        }
        RENDERER_PSEUDOGRAPHICS_PUTCHAR(0x0a); // '\n'
    }
-   fflush(RENDERER_PSEUDOGRAPHICS_STREAM);
-   return 0; // TODO: we haven't checked stdio's errors
+   return rendererPseudoGraphics_fflush();
 }
 
 
@@ -97,8 +114,7 @@ static int rendererPseudoGraphics_renderHorizontalHalfBlocks(void)
        }
        RENDERER_PSEUDOGRAPHICS_PUTCHAR(0x0a); // '\n'
    }
-   fflush(RENDERER_PSEUDOGRAPHICS_STREAM);
-   return 0; // TODO: we haven't checked stdio's errors
+   return rendererPseudoGraphics_fflush();
 }
 
 
@@ -126,8 +142,7 @@ static int rendererPseudoGraphics_renderVerticalHalfBlocks(void)
        }
        RENDERER_PSEUDOGRAPHICS_PUTCHAR(0x0a); // '\n'
    }
-   fflush(RENDERER_PSEUDOGRAPHICS_STREAM);
-   return 0; // TODO: we haven't checked stdio's errors
+   return rendererPseudoGraphics_fflush();
 }
 
 
@@ -157,8 +172,7 @@ static int rendererPseudoGraphics_renderQuadBlocks(void)
        }
        RENDERER_PSEUDOGRAPHICS_PUTCHAR(0x0a); // '\n'
    }
-   fflush(RENDERER_PSEUDOGRAPHICS_STREAM);
-   return 0; // TODO: we haven't checked stdio's errors
+   return rendererPseudoGraphics_fflush();
 }
 
 
@@ -194,8 +208,7 @@ static int rendererPseudoGraphics_renderBrailleDots(void)
        }
        RENDERER_PSEUDOGRAPHICS_PUTCHAR(0x0a); // '\n'
    }
-   fflush(RENDERER_PSEUDOGRAPHICS_STREAM);
-   return 0; // TODO: we haven't checked stdio's errors
+   return rendererPseudoGraphics_fflush();
 }
 
 
@@ -291,8 +304,7 @@ sext = byte_reverse(sext) >> 2;
        }
        RENDERER_PSEUDOGRAPHICS_PUTCHAR(0x0a); // '\n'
    }
-   fflush(RENDERER_PSEUDOGRAPHICS_STREAM);
-   return 0; // TODO: we haven't checked stdio's errors
+   return rendererPseudoGraphics_fflush();
 }
 
 

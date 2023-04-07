@@ -15,11 +15,14 @@
 #if KONPU_PLATFORM_LIBC
 #   define RENDERER_PPM        3
 
-/// @brief init function for the "PPM" renderer
-/// @param  none
+/// @brief  initialize the "PPM" renderer
+/// @param  zoomx how much to zoom (in the x direction).
+///         if value is not in [1-20], a default sensible value is chosen.
+/// @param  zoomy how much to zoom (in the y direction).
+///         if value is not in [1-20], a default sensible value is chosen.
 /// @return 0 iff initialization if successful
 ///         (always the case if the renderer if available)
-int rendererPPM_init(void);
+int rendererPPM_init(int zoomx, int zoomy);
 
 #else
 #   define RENDERER_PPM        0

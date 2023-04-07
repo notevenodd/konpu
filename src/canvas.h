@@ -136,14 +136,6 @@ static inline uint64_t canvas_at(canvas c, int x, int y);
 // will return true iff glyph is set (valid position, canvas not null)
 static inline bool canvas_putglyph(canvas c, uint64_t glyph, int x, int y);
 
-/* TODO: use a function pointer or what to have multiple renderer ???
-// specify a platform-agnostic interface for rendering a canvas
-// the .c implementations of this header will be platform dependent
-// (be it C, SDL, HTML <canvas>, X11, linux framebuffer, ...)
-void canvas_render(const_canvas cvas);
-*/
-
-
 
 //--- inline implementation ----------------------------------------------------
 
