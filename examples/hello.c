@@ -7,62 +7,69 @@
 #include "konpu.h"             // <-- tadaaa!
 
 
-// paint the screen
-static inline void paint(int delay)
+// paint: render the screen and sleep a bit
+static void paint(int delay)
 {
-#if KONPU_PLATFORM_SDL2
-    if (!renderer_sdl2_render(screen)) {
-       renderer_sdl2_drop(); exit(1);
-    }
-#elif KONPU_PLATFORM_LIBC
-    // escape sequence to clear tty ("\x1b[H\x1b[J")
-    putchar(0x1b); putchar(0x5b); putchar(0x48);
-    putchar(0x1b); putchar(0x5b); putchar(0x4a);
-    // one of the pure-C renderer:
-    canvas_render_braille(screen);
-#else
-#   error "no platform"
+
+#if RENDERER_PSEUDOGRAPHICS
+   // TODO: we must have this in the PSEUDOGRAPHICS renderer and remove the #ifdef
+   if (renderer_getId() == RENDERER_PSEUDOGRAPHICS)
+      RENDERER_PSEUDOGRAPHICS_TTY_CLEAR();
 #endif
-#
+   render();
+   if (rendererSingleton.error) {
+      renderer_drop();
+      exit(1);
+   }
 
    // sleep some n * 60th of a seconds
    sleep_ms(delay * 1000/60);
 }
 
+////////////////////////////////////////////////////////////////////////////////
 
-int main(int argc, char **argv)
-{  (void)argc; (void)argv; // not using argc/argv
-
-#if KONPU_PLATFORM_SDL2
-    if (!renderer_sdl2_init("hello, world!", 768, 432))  return 1;
-#endif
-
-   random_init(0xCAFE);
-
-   // some toki pona glyphs
+// some toki pona glyphs
 #  define GLYPH_LI         GLYPH(6030180C18306000)
 #  define GLYPH_SONA       GLYPH(9254007C44447C00)
 #  define GLYPH_SOWELI     GLYPH(7C022A0204A8A800)
 #  define GLYPH_SUNO       GLYPH(101028C628101000)
 #  define GLYPH_JAN        GLYPH(386C6C6C386CC600) // bold
 
-   // we'll wait a bit before rendering a frame:
+// we'll wait a bit before rendering a frame:
 #  define DELAY            15 //milliseconds
+
+
+int main(int argc, char **argv)
+{  (void)argc; (void)argv; // not using argc/argv
+
+   // init renderer
+#if RENDERER_SDL2
+   if (rendererSDL2_init("hello, world!", 768, 432)) return 1;
+#elif RENDERER_PSEUDOGRAPHICS
+   if (rendererPseudoGraphics_init(RENDERER_PSEUDOGRAPHICS_MODE_2x4)) return 1;
+#else
+#  error("no suitable renderer")
+#endif
+
+   // init randomizer
+   random_init(0xCAFE);
 
    while(true) {
 
+#if RENDERER_SDL2
       // TODO: HERE, WE CHEAT for now, by using SDL directly !!!
       //       The plan is for konpu to have its own simple input system
       //       to associate with a renderer. (probably covering just basic
       //       keyboard input)
-      #if KONPU_PLATFORM_SDL2
+      if (renderer_getId() == RENDERER_SDL2) {
           SDL_Event event;
           while(SDL_PollEvent(&event)) {
              switch(event.type) {
                 case SDL_QUIT: goto quit;
              }
           }
-      #endif
+      }
+#endif
 
       canvas_set(screen, 0); paint(DELAY);
 
@@ -112,9 +119,7 @@ int main(int argc, char **argv)
 
    }
 
-#if KONPU_PLATFORM_SDL2
 quit:
-   renderer_sdl2_drop();
-#endif
+   renderer_drop();
    return 0;
 }

@@ -1,62 +1,59 @@
 // choose one platform for rendering (or control it from your build system)
 #define  KONPU_PLATFORM_SDL2       // will use SDL2
-// #define  KONPU_PLATFORM_POSIX   // will output on terminal
+//#define  KONPU_PLATFORM_POSIX  // will output on terminal
 
 #define  KONPU_RES_MODE 1      // <-- some default resolution
 #define  KONPU_IMPLEMENTATION  // <-- must be defined once to include the code
-#include "konpu.h"             // <-- tadaaa!
 
+#include <stdlib.h>
+#include "konpu.h"
 
+////////////////////////////////////////////////////////////////////////////////
 
-void waitkey(void) {
+static void quitOnError(void) {
+   if (renderer_getError()) {
+      renderer_drop();
+      exit(1);
+   }
+}
+
+static void quit(void) {
+   quitOnError();
+   renderer_drop();
+   exit(0);
+}
+
+static void waitForAKey(void) {
+#if RENDERER_SDL2
    // TODO: HERE, WE CHEAT for now, by using SDL directly !!!
    //       The plan is for konpu to have its own simple input system
    //       to associate with a renderer. (probably covering just basic
    //       keyboard input)
-#if KONPU_PLATFORM_SDL2
-    SDL_Event event;
-    while (true) {
-       while(SDL_PollEvent(&event)) {
-          switch(event.type) {
-             case SDL_QUIT   : goto quit;
-             case SDL_KEYDOWN: return;
-          }
-       }
-       sleep_ms(10);
-    }
-    return;
-
-quit:
-    renderer_sdl2_drop();
-    exit(0);
+   if (renderer_getId() == RENDERER_SDL2) {
+      SDL_Event event;
+      while (true) {
+         while(SDL_PollEvent(&event)) {
+            switch(event.type) {
+               case SDL_QUIT   : quit();
+               case SDL_KEYDOWN: return;
+            }
+         }
+         sleep_ms(10);
+      }
+   }
+#elif KONPU_PLATFORM_POSIX
+   // for now, just have a delay
+   sleep_ms(300);
 #endif
 }
 
 
-// paint the screen
-static inline void paint(void)
-{
-#if KONPU_PLATFORM_SDL2
-    if (!renderer_sdl2_render(screen)) {
-       renderer_sdl2_drop(); exit(1);
-    }
-#elif KONPU_PLATFORM_LIBC
-    // escape sequence to clear tty ("\x1b[H\x1b[J")
-    putchar(0x1b); putchar(0x5b); putchar(0x48);
-    putchar(0x1b); putchar(0x5b); putchar(0x4a);
-    // one of the pure-C renderer:
-    canvas_render_braille(screen);
-#else
-#   error "no platform"
-#endif
-#
-}
-
+////////////////////////////////////////////////////////////////////////////////
 
 #define EXAMPLE   GLYPH(7C022A0204A8A800)  // soweli glyph
 
 // print message and glyph
-void show(const char* msg, uint64_t glyph)
+static void show(const char* msg, uint64_t glyph)
 {
    canvas_set(screen, 0);
    print_quadrant(screen, 0,0, msg);
@@ -69,16 +66,27 @@ void show(const char* msg, uint64_t glyph)
 
    print_quadrant(screen, 0,10, "PRESS ANY KEY");
 
-   // refresh and wait for a key
-   paint();
-   waitkey();
+   // render screen:
+#if RENDERER_PSEUDOGRAPHICS
+   // TODO: we must have this in the PSEUDOGRAPHICS renderer and remove the #ifdef
+   if (renderer_getId() == RENDERER_PSEUDOGRAPHICS)
+      RENDERER_PSEUDOGRAPHICS_TTY_CLEAR();
+#endif
+   render();
+   quitOnError();
+   waitForAKey();
 }
 
 int main(int argc, char **argv)
 {  (void)argc; (void)argv; // not using argc/argv
 
-#if KONPU_PLATFORM_SDL2
-    if (!renderer_sdl2_init("Glyphs Operations Demo", 768, 432))  return 1;
+   // init renderer
+#if RENDERER_SDL2
+   if (rendererSDL2_init("Glyphs Operations Demo", 768, 432)) return 1;
+#elif RENDERER_PSEUDOGRAPHICS
+   if (rendererPseudoGraphics_init(RENDERER_PSEUDOGRAPHICS_MODE_2x2)) return 1;
+#else
+#  error("no suitable renderer")
 #endif
 
    uint64_t g = EXAMPLE;
@@ -93,6 +101,4 @@ int main(int argc, char **argv)
       show("rotate 270 "    , glyph_rotate270(g));
       show("transpose "     , glyph_transpose(g));
    }
-
-   return 1;
 }

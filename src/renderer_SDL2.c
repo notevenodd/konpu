@@ -1,135 +1,50 @@
 #include "renderer_SDL2.h"
+#if RENDERER_SDL2
+#include "renderer.h"
 #include "screen.h"
-#if KONPU_PLATFORM_SDL2
 
-// globals variables for a SDL2 renderer:
-static SDL_Window   *renderer_sdl2_win  = NULL;
-static SDL_Renderer *renderer_sdl2_rndr = NULL;
-static SDL_Texture  *renderer_sdl2_tex  = NULL;
-
-
-// TODO: check how to do some basic error reporting
-//       there's SDL_ShowSimpleMessageBox and more that might be used...
-// in any case, it would be desirable to a log_error() function,
-// which would work with same signature on all platforms.
-#if KONPU_PLATFORM_LIBC
-#   include <stdio.h>
-    // not good. depending on how SDL2 is built, stdin/stdout may redirect to
-    // a file or be closed, so stderr would be only last option.
-    static inline int
-    renderer_sdl2_error(const char* fmt, ...)
-    { return fprintf(stderr, "[renderer]: %s\n", SDL_GetError()); }
-#else
-#   define renderer_sdl2_error(whatever, ...)
-#endif
+// global state for a SDL2 renderer:
+static SDL_Window   *rendererSDL2_win  = NULL;
+static SDL_Renderer *rendererSDL2_rndr = NULL;
+static SDL_Texture  *rendererSDL2_tex  = NULL;
 
 
-
-bool renderer_sdl2_init(const char* title, int win_width, int win_height)
+// SDL2 renderer drop function
+static int rendererSDL2_drop(void)
 {
-   if ( (renderer_sdl2_win  != NULL) ||
-        (renderer_sdl2_rndr != NULL) ||
-        (renderer_sdl2_tex  != NULL) ){
-      renderer_sdl2_error("%s", "already initialized?\n");
-      return false;
+   if (rendererSDL2_tex) {
+      SDL_DestroyTexture(rendererSDL2_tex);
+      rendererSDL2_tex  = NULL;
    }
-
-   // init video
-   if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0) {
-      renderer_sdl2_error("%s", SDL_GetError());
-      goto error_init;
+   if (rendererSDL2_rndr) {
+      SDL_DestroyRenderer(rendererSDL2_rndr);
+      rendererSDL2_rndr = NULL;
    }
-
-   // create window
-
-   // TODO: SDL_WINDOW_RESIZABLE <-- nice, maybe, but should be configurable,
-   //                         and we'd need to handle events too for resizing
-   Uint32 win_flags = 0;
-   // TODO: check win_width, win_height
-   // they should be positive, ...
-   // if they're both 0, maybe we could go full screen or something
-
-   renderer_sdl2_win = SDL_CreateWindow(
-                          (title)? title : "ilo Konpu",
-                          SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                          win_width, win_height, win_flags);
-   if (!renderer_sdl2_win) {
-      renderer_sdl2_error("%s", SDL_GetError());
-      goto error_window;
-   }
-
-   // create SDL renderer
-   renderer_sdl2_rndr = SDL_CreateRenderer(renderer_sdl2_win, -1,
-                            0); // TODO:   SDL_RENDERER_ACCELERATED???
-                                //       | SDL_RENDERER_PRESENTVSYNC
-   if (!renderer_sdl2_rndr) {
-      renderer_sdl2_error("%s", SDL_GetError());
-      goto error_renderer;
-   }
-
-   // create a single SDL_Texture for painting the whole screen onto.
-   renderer_sdl2_tex = SDL_CreateTexture(renderer_sdl2_rndr,
-                           SDL_PIXELFORMAT_ARGB8888,
-                           SDL_TEXTUREACCESS_STREAMING,
-                           screen.width  * GLYPH_WIDTH,
-                           screen.height * GLYPH_HEIGHT);
-   if (!renderer_sdl2_tex) {
-      renderer_sdl2_error("%s", SDL_GetError());
-      goto error_texture;
-   }
-   // TODO: maybe we should setup the texture with a single color
-   //       (or something) and render it in the window.
-
-
-return true;
-error_texture:
-      SDL_DestroyRenderer(renderer_sdl2_rndr);
-error_renderer:
-      SDL_DestroyWindow(renderer_sdl2_win);
-error_window:
-      SDL_QuitSubSystem(SDL_INIT_VIDEO);
-error_init:
-      renderer_sdl2_error("%s", SDL_GetError());
-      return false;
-}
-
-
-void renderer_sdl2_drop()
-{
-   if (renderer_sdl2_tex) {
-      SDL_DestroyTexture(renderer_sdl2_tex);
-      renderer_sdl2_tex  = NULL;
-   }
-   if (renderer_sdl2_rndr) {
-      SDL_DestroyRenderer(renderer_sdl2_rndr);
-      renderer_sdl2_rndr = NULL;
-   }
-   if (renderer_sdl2_rndr) {
-      SDL_DestroyWindow(renderer_sdl2_win);
-      renderer_sdl2_win  = NULL;
+   if (rendererSDL2_rndr) {
+      SDL_DestroyWindow(rendererSDL2_win);
+      rendererSDL2_win  = NULL;
    }
    SDL_QuitSubSystem(SDL_INIT_VIDEO);
+   return 0;
 }
 
-
-// TODO: cvas should be screen!
-bool renderer_sdl2_render(const_canvas cvas)
-{  CANVAS_ASSERT(cvas);
-
+// SDL2 render function
+static int rendererSDL2_render(void)
+{
    // lock our texture to gain **write-only** access to its pixels
    // all pixels *should* be written before unlocking the texture,
    // otherwise they may have uninitialized value.
    int       pitch;
    void     *pixel_data;
-   SDL_LockTexture(renderer_sdl2_tex, NULL, &pixel_data, &pitch);
+   SDL_LockTexture(rendererSDL2_tex, NULL, &pixel_data, &pitch);
    uint32_t *pixels = pixel_data;
    assert(pixels != NULL);
-   assert(pitch == (sizeof(*pixels) * cvas.width * GLYPH_WIDTH));
+   assert(pitch == (sizeof(*pixels) * screen.width * GLYPH_WIDTH));
 
    // paint the canvas onto the texture's pixels
-   for (int y = 0; y < GLYPH_HEIGHT * cvas.height; y++) {
-       for (int x = 0; x < cvas.width; x++) {
-           uint64_t glyph = canvas_glyph(cvas, x, y / GLYPH_HEIGHT);
+   for (int y = 0; y < GLYPH_HEIGHT * screen.height; y++) {
+       for (int x = 0; x < screen.width; x++) {
+           uint64_t glyph = canvas_glyph(screen, x, y / GLYPH_HEIGHT);
            unsigned char line = glyph_line(glyph, y % GLYPH_HEIGHT);
 
            for (int i = (GLYPH_WIDTH - 1); i >= 0; i--) {
@@ -151,14 +66,74 @@ bool renderer_sdl2_render(const_canvas cvas)
    }
 
    // now release (unlock) the texture and render it
-   SDL_UnlockTexture(renderer_sdl2_tex);
-   if (SDL_RenderCopy(renderer_sdl2_rndr, renderer_sdl2_tex, NULL, NULL) < 0) {
-      renderer_sdl2_error("%s", SDL_GetError());
-      return false;
-   }
-   SDL_RenderPresent(renderer_sdl2_rndr);
-   return true;
+   SDL_UnlockTexture(rendererSDL2_tex);
+   int err = SDL_RenderCopy(rendererSDL2_rndr, rendererSDL2_tex, NULL, NULL);
+   if (err)  return err;
+   SDL_RenderPresent(rendererSDL2_rndr);
+   return 0;
 }
 
+int rendererSDL2_init(const char* title, int win_width, int win_height)
+{
+   // drop the active renderer
+   renderer_drop();
+   rendererSingleton.error = 0;
+   assert(rendererSDL2_win  == NULL);
+   assert(rendererSDL2_rndr == NULL);
+   assert(rendererSDL2_tex  == NULL);
 
-#endif //KONPU_PLATFORM_SDL2
+   // init video
+   int ret = SDL_InitSubSystem(SDL_INIT_VIDEO);
+   if (ret)  goto error_init;
+
+   // create window
+
+   // TODO: SDL_WINDOW_RESIZABLE <-- nice, maybe, but should be configurable,
+   //                         and we'd need to handle events too for resizing
+   Uint32 win_flags = 0;
+   // TODO: check win_width, win_height
+   // they should be positive, ...
+   // if they're both 0, maybe we could go full screen or something
+
+   rendererSDL2_win = SDL_CreateWindow(
+                          (title)? title : "ilo Konpu",
+                          SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+                          win_width, win_height, win_flags);
+   if (rendererSDL2_win == NULL)  { ret = -1; goto error_window; }
+
+   // create SDL renderer
+   rendererSDL2_rndr = SDL_CreateRenderer(rendererSDL2_win, -1,
+                            0); // TODO:   SDL_RENDERER_ACCELERATED???
+                                //       | SDL_RENDERER_PRESENTVSYNC
+   if (rendererSDL2_rndr == NULL)  { ret = -1; goto error_renderer; }
+
+   // create a single SDL_Texture for painting the whole screen onto.
+   rendererSDL2_tex = SDL_CreateTexture(rendererSDL2_rndr,
+                           SDL_PIXELFORMAT_ARGB8888,
+                           SDL_TEXTUREACCESS_STREAMING,
+                           screen.width  * GLYPH_WIDTH,
+                           screen.height * GLYPH_HEIGHT);
+   if (rendererSDL2_tex == NULL)   { ret = -1; goto error_texture; }
+
+   // set the active render (and render() once, otherwise window is empty)
+   rendererSingleton.id     = RENDERER_SDL2;
+   rendererSingleton.render = &rendererSDL2_render;
+   rendererSingleton.drop   = &rendererSDL2_drop;
+
+   // TODO: to complete the initialization, we may wish to do
+   //       something such as clearing the texture
+
+
+   return 0;
+// error handling:
+error_texture:
+   SDL_DestroyRenderer(rendererSDL2_rndr);
+error_renderer:
+   SDL_DestroyWindow(rendererSDL2_win);
+error_window:
+   SDL_QuitSubSystem(SDL_INIT_VIDEO);
+error_init:
+   return ret;
+}
+
+#endif //RENDERER_SDL2
