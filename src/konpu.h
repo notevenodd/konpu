@@ -28,7 +28,7 @@ static inline int renderer_initSimple()
       return 0;
    if (!rendererPseudoGraphics_init(RENDERER_PSEUDOGRAPHICS_MODE_ENUMCOUNT))
       return 0;
-   if (!rendererPPM_init())
+   if (!rendererPPM_init(0, 0))
       return 0;
    return 1;
 }

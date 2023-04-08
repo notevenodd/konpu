@@ -17,9 +17,9 @@
 
 /// @brief  initialize the "PPM" renderer
 /// @param  zoomx how much to zoom (in the x direction).
-///         if value is not in [1-20], a default sensible value is chosen.
 /// @param  zoomy how much to zoom (in the y direction).
-///         if value is not in [1-20], a default sensible value is chosen.
+///         When the given values of zoomx and zoomy are not in [1-20],
+///         Konpu will choose some default sensible value instead.
 /// @return 0 iff initialization if successful
 ///         (always the case if the renderer if available)
 int rendererPPM_init(int zoomx, int zoomy);
