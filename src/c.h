@@ -1,25 +1,35 @@
-#ifndef  KONPU_C_H
-#define  KONPU_C_H
-#include "platform.h"
-
-/* - include "platform.h"
+/*******************************************************************************
+ * @file
+ * - include "platform.h"
  * - checks for C
  * - includes most free-standing (libc independent) C headers,
  * - a few "polyfills" to reach C23 level (when possible)
  * - a few c utilities but possibly without libc (assert, ...)
  * - variadic macro utilities
- */
+ ******************************************************************************/
+#ifndef  KONPU_C_H
+#define  KONPU_C_H
+#include "platform.h"
 
-/*===< basic C standard >=====================================================*/
-
-/* we REQUIRE C99 or later: */
+/* Konpu REQUIREs C99 or later */
 #if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)
 #   error "Compiler doesn't conform to C99 (or later) standard."
 #endif
 
-// FREE-STANDING headers: those are includes from the C standard library which
-// should be headers-only files, and thus are safe to include on any platform,
-// even if when we do not link to libc.
+
+//===< freestanding headers >===================================================
+// FREESTANDING headers: C includes which should be headers-only files, and thus
+// are safe to include on any platform, even when not linking libc.
+//
+// When possible, try to define macro constant and other "things" which are part
+// of C23, even for older versions of C.
+
+
+/* includes for compiler builtins/intrinsics */
+
+#if defined(_MSC_VER)   // Microsoft Visual C++
+#   include <intrin.h>  // list of intrinsics: https://learn.microsoft.com/en-us/cpp/intrinsics/compiler-intrinsics?view=msvc-170
+#endif
 
 /* C89 free-standing headers */
 
@@ -33,13 +43,40 @@
 #           endif
 
 #  include  <limits.h>       // range of integer types
-#           if CHAR_BIT != 8 // <-- we REQUIRE 8-bits bytes
+#           if CHAR_BIT != 8 // <-- REQUIREs 8-bits bytes
 #              error "bytes do not have an 8-bits width"
 #           endif
+
+            // The following macros expands to the number of bits in of a 2^n-1
+            // integer. Thus, we can pass the MAX of an integer type to get that
+            // type's width as a macro constant. I searched and found this trick
+            // from: https://stackoverflow.com/questions/3957252/is-there-any-way-to-compute-the-width-of-an-integer-type-at-compile-time
+            // The credit for the macros goes to Hallvard B. Furuseth who had
+            // posted them (under the name IMAX_BITS) in the comp.lang.c Usenet
+            // newsgroup, see: https://groups.google.com/g/comp.lang.c/c/NfedEFBFJ0k
+            //            and: https://groups.google.com/group/comp.lang.c/msg/e998153ef07ff04b
+            // also, see explanation at: https://web.archive.org/web/20150403064546/http://coding.derkeiler.com/Archive/C_CPP/comp.lang.c/2009-01/msg02242.html
+            //
+            // #bits for a number 2^n-1, where 0 <= n < 3e+10
+/*#         define UINT_COUNT_WIDTH_OF_MAX(m) ((m) /((m)%0x3fffffffL+1) /0x3fffffffL %0x3fffffffL *30 \
+                                + (m)%0x3fffffffL /((m)%31+1)/31%31*5 + 4-12/((m)%31+3))
+*/          // #bits for a number 2^n-1, where 0 <= b < 2040
+#           define UINT_COUNT_WIDTH_OF_MAX(m) ((m)/((m)%255+1) / 255%255*8 + 7-86/((m)%255+12))
+
 #           if __STDC_VERSION__ <= 201710L // "polyfill" def. (for prior to C23)
-#              define CHAR_WIDTH   CHAR_BIT
-#              define SCHAR_WIDTH  CHAR_BIT
-#              define UCHAR_WIDTH  CHAR_BIT
+#              define CHAR_WIDTH          CHAR_BIT
+#              define UCHAR_WIDTH         CHAR_BIT
+#              define SCHAR_WIDTH         CHAR_BIT
+
+#              define USHRT_WIDTH         UINT_COUNT_WIDTH_OF_MAX(USHRT_MAX)
+#              define UINT_WIDTH          UINT_COUNT_WIDTH_OF_MAX(UINT_MAX)
+#              define ULONG_WIDTH         UINT_COUNT_WIDTH_OF_MAX(ULONG_MAX)
+#              define ULLONG_WIDTH        UINT_COUNT_WIDTH_OF_MAX(ULLONG_MAX)
+
+#              define SHRT_WIDTH          USHRT_WIDTH
+#              define INT_WIDTH           UINT_WIDTH
+#              define LONG_WIDTH          ULONG_WIDTH
+#              define LLONG_WIDTH         ULLONG_WIDTH
 #           endif
 
 #  include  <stdarg.h>       // variable arguments
@@ -48,7 +85,7 @@
 
 /* C95 free-standing headers */
 //#include  <iso646.h>       // alt-spelling of operators
-            // we do not include this.
+            // Konpu does not include this.
 
 /* C99 free-standing headers */
 
@@ -58,8 +95,8 @@
 #           endif
 
 #  include  <stdint.h>       // fixed-width integer types  (extra support below)
-            // we REQUIRE (u)int8_t, (u)int16_t, (u)int32_t, (u)int64_t:
-            // (we don't have static_assert for sure yet, so let's do it portably):
+            // Konpu REQUIREs (u)int8_t, (u)int16_t, (u)int32_t, (u)int64_t.
+            // (we don't have static_assert for sure yet, so do it portably):
             /*[[maybe_unused]]*/ typedef char UTIL_static_assert_has_int8  [(sizeof( int_least8_t ) == 1)? 1 : -1];
             /*[[maybe_unused]]*/ typedef char UTIL_static_assert_has_uint8 [(sizeof(uint_least8_t ) == 1)? 1 : -1];
             /*[[maybe_unused]]*/ typedef char UTIL_static_assert_has_int16 [(sizeof( int_least16_t) == 2)? 1 : -1];
@@ -91,12 +128,11 @@
 
 //#include  <stdalign.h>     // alignas/alignof
 #           if __STDC_VERSION__ < 201112L    // C99
-               // In C99, we canNOT have alignas/alignof :(
-               // but about alignement, at this point in the header, we have the
-               // types needed to TRY to "polyfill" <stddef.h> up to C11-level,
-               // and provide max_align_t for C99: max_align_t would usually be
-               // the largest scalar type, let's try to provide that, but that
-               // could fail. Frankly you should not rely on this if you use C99
+               // C99 doesn't have alignas/alignof :(
+               // but about alignement, at this point in the header, we can TRY
+               // to "polyfill" <stddef.h> up to C11-level, and provide
+               // max_align_t for C99: max_align_t would usually be the largest
+               // scalar type... (but one shouldn't portably rely on this!)
                typedef union max_align_t {
                   intmax_t      big_int;
 #                 ifdef __SIZEOF_INT128__
@@ -136,14 +172,14 @@
 
 /* C23 free-standing headers */
 
+//TODO: those headers just define macros, but are they freestanding?
 #if __STDC_VERSION__ > 201710L
-//TODO: seems those are just macros, no functions.
-//      are those free standing headers or not? if so, we could include them.
-//#   include <stdbit.h>       // bit-manipulation utilities
-//#   include <stdckdint.h>    // checked integer arithmetic
+//#include <stdckdint.h>    // checked integer arithmetic
+//#include <stdbit.h>       // bit-manipulation utilities
+//          '--> Konpu's "bits.h" includes almost the same functions
 #endif
 
-//===</ basic C standard >======================================================
+//===</ freestanding headers >==================================================
 
 
 
@@ -239,35 +275,37 @@
 
 //===< uint128_t >==============================================================
 // an (u)int128_t type may be defined if such type is available,
-// So let's bring it in case it's available to the compiler.
-// To test the type availability, one can use #ifdef INT128_WIDTH
+// So let's bring it in case it's available to the compiler but not to C.
+// To test the type availability, one can now use #ifdef INT128_WIDTH
+//
+// Note that C99 introduced intmax_t as the maximum-width signed integer type.
+// But anyway, starting with C23, extended integer types may be wider than
+// intmax_t, so introducing an extended int128_t isn't really breaking stuff.
 
-#if __STDC_VERSION__ <= 201710L // prior to C23
-#   ifdef __SIZEOF_INT128__
-       // ^-- when this is defined, we assume compiler has a __int128 type
-       //     available (this is the case in gcc)
-       typedef  signed   __int128    int128_t;
-       typedef  unsigned __int128    uint128_t;
-       typedef  signed   __int128    int_fast128_t;
-       typedef  unsigned __int128    uint_fast128_t;
-       typedef  signed   __int128    int_least128_t;
-       typedef  unsigned __int128    uint_least128_t;
-#      define   UINT128_MAX          ((uint128_t)-1)
-#      define   INT128_MAX           ((int128_t)+(UINT128_MAX/2))
-#      define   INT128_MIN           (-INT128_MAX-1) //TODO: hmmm, looks UB-ish
-#      define   UINT_LEAST128_MAX    UINT128_MAX
-#      define   INT_LEAST128_MAX     INT128_MAX
-#      define   INT_LEAST128_MIN     INT128_MIN
-#      define   UINT_FAST128_MAX     UINT128_MAX
-#      define   INT_FAST128_MAX      INT128_MAX
-#      define   INT_FAST128_MIN      INT128_MIN
-#      define   INT128_WIDTH         128
-#      define   UINT128_WIDTH        128
-#      define   INT_LEAST128_WIDTH   128
-#      define   UINT_LEAST128_WIDTH  128
-#      define   INT_FAST128_WIDTH    128
-#      define   UINT_FAST128_WIDTH   128
-#   endif
+#if defined(__SIZEOF_INT128__) && !defined(INT128_MAX)
+    //        ^-- when this macro constant defined, we assume the compiler has
+    //            an __int128 type available (this is the case in gcc)
+    typedef  signed   __int128    int128_t;
+    typedef  unsigned __int128    uint128_t;
+    typedef  signed   __int128    int_fast128_t;
+    typedef  unsigned __int128    uint_fast128_t;
+    typedef  signed   __int128    int_least128_t;
+    typedef  unsigned __int128    uint_least128_t;
+#   define   UINT128_MAX          ((uint128_t)-1)
+#   define   INT128_MAX           ((int128_t)+(UINT128_MAX/2))
+#   define   INT128_MIN           (-INT128_MAX-1)
+#   define   UINT_LEAST128_MAX    UINT128_MAX
+#   define   INT_LEAST128_MAX     INT128_MAX
+#   define   INT_LEAST128_MIN     INT128_MIN
+#   define   UINT_FAST128_MAX     UINT128_MAX
+#   define   INT_FAST128_MAX      INT128_MAX
+#   define   INT_FAST128_MIN      INT128_MIN
+#   define   INT128_WIDTH         128
+#   define   UINT128_WIDTH        128
+#   define   INT_LEAST128_WIDTH   128
+#   define   UINT_LEAST128_WIDTH  128
+#   define   INT_FAST128_WIDTH    128
+#   define   UINT_FAST128_WIDTH   128
 #endif
 //===</ uint128_t >=============================================================
 
@@ -285,7 +323,7 @@
 //   case  2: ...  break;
 //   default: unreachable();
 // }
-// and compiler may do a simple lookup with no other testing
+// and compiler may optimize this as a simple lookup with no other testing
 
 #if __STDC_VERSION__ > 201710L
     // ^^-- >C17, ie C23 or later. unreachable() was defined in <stddef.h>
@@ -312,14 +350,18 @@
 // - otherwise expands to nothing.
 
 #ifdef NDEBUG
-#   define assert(condition)   ((void)0)
+#   define assert(...)     ((void)0)
 #elif KONPU_PLATFORM_SDL2
-#   define assert(condition)   SDL_assert(condition)
+#   define assert(...)     SDL_assert(__VA_ARGS__)
 #elif KONPU_PLATFORM_LIBC
 #   include <assert.h>
-#else // with no platform, no can do
-      // or TODO could we conceivably write an error message on the main screen?
-#   define assert(condition)   ((void)0)
+#elif __GNUC__                                             // with no platform,
+#   define assert(...)     if (!(__VA_ARGS__))  __builtin_trap()  //   stop the
+#elif _MSC_VER                                                    //  execution
+#   define assert(...)     if (!(__VA_ARGS__))  __debugbreak()    //  using any
+#else                                                             // mean neces
+#   define assert(...)     if (!(__VA_ARGS__))  *(volatile int *)0 = 0 // -sary
+//# define assert(...)     ((void)0)
 #endif
 
 //===</ assert(condition) >=====================================================
@@ -327,13 +369,14 @@
 
 
 //===< static_assert(condition, [message]) >====================================
-// 'static_assert' as exists now in C, but "pollyfill"-ed for all versions of C
+// 'static_assert' as exists starting from C23, but possibly "pollyfill"-ed it
+// to all versions of C.
 //
-// condition is evaluated at compile time and iff it's zero, then compile-time
-// error occurs.
+// condition is evaluated at compile time and iff it is zero, then a
+// compile-time error occurs.
 
 #if __STDC_VERSION__ > 201710L // C23 or later
-    // nothing (static_assert is a keyword)
+    // nothing to do (as `static_assert` is a C keyword)
 #elif (__STDC_VERSION__ > 199901L) || defined(__GNUC__)
     // ^^-- C11 and C17 (and gcc) have _Static_assert(expression, message)
 #   define STATIC_ASSERT_2_(condition, msg)  _Static_assert(condition, msg)
@@ -368,7 +411,7 @@
 #      define thread_local  __declspec(thread)
 #   endif
 #elif __STDC_VERSION__ <= 201710L // C11 and C17
-#   ifndef thread_local // <-- might already be defined from <threads.h>
+#   ifndef    thread_local  // <-- might already be defined from <threads.h>
 #      define thread_local  _Thread_local
 #   endif
 #endif
@@ -387,11 +430,11 @@
 //                need to change the names if I seek C++ compatibility.
 
 #if defined(__GNUC__)
-#   define likely(condition)    __builtin_expect((condition), 1)
-#   define unlikely(condition)  __builtin_expect((condition), 0)
+#   define likely(...)          __builtin_expect((__VA_ARGS__), 1)
+#   define unlikely(...)        __builtin_expect((__VA_ARGS__), 0)
 #else
-#   define likely(condition)    (condition)
-#   define unlikely(condition)  (condition)
+#   define likely(...)          (__VA_ARGS__)
+#   define unlikely(...)        (__VA_ARGS__)
 #endif
 
 //===</ likely(condition) / unlikely(condition) >================================
