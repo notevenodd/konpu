@@ -3,9 +3,10 @@
 // TODO/FIXME: __builtin_abs is a gcc/clang builtin
 //             `int abs(int z)` is otherwise from <stdlib.h>
 //             so, TODO => macro wrap those properly somewhere
-
-#if defined(EXIT_FAILURE) && defined(EXIT_SUCCESS) && defined(MB_CUR_MAX) && defined(NULL) && defined(RAND_MAX)
-    // if we have all those, then it means we have included <stdlib.h>
+#ifdef __STDC_VERSION_STDLIB_H__
+    // if we have this, then <stdlib.h> was included (with C23 or later)
+#elif defined(EXIT_FAILURE) && defined(EXIT_SUCCESS) && defined(MB_CUR_MAX) && defined(NULL) && defined(RAND_MAX)
+    // if we have all those, then let's consider <stdlib.h> was included
 #else
 #   define abs(x)  __builtin_abs((x))
 #endif
