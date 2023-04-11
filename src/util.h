@@ -1,11 +1,12 @@
+/*******************************************************************************
+ * @file
+ * miscellaneous macros or utilities used throughout the project,
+ *                                   or that we wish to provide to users.
+ ******************************************************************************/
 #ifndef  KONPU_UTIL_H
 #define  KONPU_UTIL_H
 #include "platform.h"
 #include "c.h"
-
-/* - misc. macro or utilities used throughout the project,
- *                            or that we wish to provide to users.
- */
 
 
 //===< time >===================================================================
@@ -20,132 +21,6 @@
 void sleep_ms(int milliseconds);
 
 //===</ time >==================================================================
-
-
-//===< FIXED-WIDTH INTEGERS >===================================================
-// utilities on fixed-width unsigned ints, including some of those:
-// clz     : count leading  zero bits (but: result is undefined if 0)
-// ctz     : count trailing zero bits (but: result is undefined if 0)
-// popcount: count the number of bits set
-// //bswap   : swap bits
-// reverse : reverse every bit
-// hamming : this is the "hamming distance" of two bit sequences,
-//           it counts positions at which the bits differ, ie: the min. number
-//           of substitutions required to change one sequence into the other.
-//           It provides a "distance" to tell "how similar" two glyphs are.
-//------------------------------------------------------------------------------
-
-// bit/byte selection macros for unsigned integer types
-// - 'x' *MUST* be of a unsigned integer type (otherwise undefined behaviour)
-// - 'n' should be >= 0 and less than the number of bits of the type of x.
-// we consider bit/bytes starting as 0 from the the lowest bit/bytes.
-
-// returns the value (0 or 1) of the nth-bit of x (n in 0..7)
-#define uint_bit( x, n)             (((x) >> (n)) & 1U)
-
-// returns a non-zero value iff the nth-bit of x is set (n in 0..7)
-// note: this can be done with uint_bit(x,n) too,
-//       however, if n is a constant, it might take one op less.
-//#define uint64_bit_isset( x, n)     ((x) & (UINT64_C(1)<<(n)))
-
-#define uint_byte(x, n)             (((x) >> 8*(n)) & 0xffU)
-
-// this macro merges bits from two unsigned integers according to a mask.
-// the mask should contains 0 where bits from x are selected, 1 where from y.
-#define UINT_MERGE(x, y, mask)      ((x) ^ (((x) ^ (y)) & (mask)))
-        // the obvious way would be (x & ~mask) | (y & mask), but this may
-        // achieve the same with one operation less.
-        // Based on "Bit Twiddling Hacks" by Sean Eron Anderson
-        // https://graphics.stanford.edu/~seander/bithacks.html#MaskedMerge
-        // (code snippet is in the public domain)   (sent by Ron Jeffery)
-
-// reverse bits in a byte
-#define byte_reverse(byte) \
-        (((byte) * UINT64_C(0x0202020202) & UINT64_C(0x010884422010)) % 1023)
-        // Based on "Bit Twiddling Hacks" by Sean Eron Anderson
-        // https://graphics.stanford.edu/~seander/bithacks.html#ReverseByteWith64BitsDiv
-        // (code snippet is in the public domain)
-        // This uses three 64-bits operations (&, *, and %)
-        // The method was attributed to Rich Schroeppel in the Programming Hacks
-        // section of Beeler, M., Gosper, R. W., and Schroeppel, R. HAKMEM.
-        // MIT AI Memo 239, Feb. 29, 1972.
-
-#if defined(__GNUC__) || defined(__clang__)
-    // might not be optimal for mere bytes,
-    // but if it's almost just one assembly instructions, it's fine.
-    #define byte_clz(x)                __builtin_clz((x) << 24)
-                                       /*^FIXME*/ static_assert(sizeof(int)==4);
-                                       //'------- I'm adding the 24 so the byte
-                                       //         is in leading position as we
-                                       //         assumes int is 32 bits. OUCH!
-    #define byte_ctz(x)                __builtin_ctz(x)
-    #define byte_popcount(x)           __builtin_popcount(x)
-#elif __STDC_VERSION__ > 201710L       // C23 or later
-    #define byte_clz(x)                stdc_leading_zeros((unsigned char)(x))
-    #define byte_ctz(x)                stdc_trailing_zeros((unsigned char)(x))
-    #define byte_popcount(x)           stdc_count_ones((unsigned char)(x))
-#else
-    # error "clz/ctz/popcount for bytes rely on GCC/CLANG builtins"
-    // SOMEDAY/MAYBE: provide portable C implementation,
-    //                (it may take the forms of precomputed tables!)
-#endif
-
-// 'int' is garantueed to be at minimum 16-bit
-#if defined(__GNUC__) || defined(__clang__)
-//  #define uint16_clz(x)              __builtin_clz(x) // would only work if int is exactly 16 bits
-    #define uint16_ctz(x)              __builtin_ctz(x)
-    #define uint16_popcount(x)         __builtin_popcount(x)
-    //#define uint16_bswap(x)          __builtin_bswap16(x)
-#elif __STDC_VERSION__ > 201710L       // C23 or later
-    #define uint16_clz(x)              stdc_leading_zeros((uint16_t)(x))
-    #define uint16_ctz(x)              stdc_trailing_zeros((uint16_t)(x))
-    #define uint16_popcount(x)         stdc_count_ones((uint16_t)(x))
-#else
-    # error "ctz/popcount/bswap for uint16_t rely on GCC/CLANG builtins"
-    // TODO: SOMEDAY/MAYBE: provide portable C implementation.
-#endif
-#define uint16_hamming_distance(x, y)  uint16_popcount((x) ^ (y));
-
-// 'long' is garantueed to be at minimum 32-bit
-
-#if defined(__GNUC__) || defined(__clang__)
-//  #define uint32_clz(x)              __builtin_clzl(x)  // would only work if long is exactly 32 bits
-    #define uint32_ctz(x)              __builtin_ctzl(x)
-    #define uint32_popcount(x)         __builtin_popcountl(x)
-    //#define uint32_bswap(x)          __builtin_bswap32(x)
-#elif __STDC_VERSION__ > 201710L       // C23 or later
-    #define uint32_clz(x)              stdc_leading_zeros((uint32_t)(x))
-    #define uint32_ctz(x)              stdc_trailing_zeros((uint32_t)(x))
-    #define uint32_popcount(x)         stdc_count_ones((uint32_t)(x))
-#else
-    # error "clz/ctz/popcount/bswap for uint32_t rely on GCC/CLANG builtins"
-    // TODO: SOMEDAY/MAYBE: provide portable C implementation.
-#endif
-#define uint32_hamming_distance(x, y)  uint32_popcount((x) ^ (y));
-
-// 'long long' is garantueed to be at minimum 64+ bits
-// (commonly, on 64bit systems, 'long' might be)
-#if defined(__GNUC__) || defined(__clang__)
-    // long long must be 64+ bits, so use clzll/ctzll instead of clzl/ctzl
-    #define uint64_clz(x)              __builtin_clzll(x)
-    // TODO/FIXME  ^^-^^^--- only works if long long is *exactly* 64 bits
-    #define uint64_ctz(x)              __builtin_ctzll(x)
-    #define uint64_popcount(x)         __builtin_popcountll(x)
-    //#define uint64_bswap(x)          __builtin_bswap64(x)
-#elif __STDC_VERSION__ > 201710L       // C23 or later
-    #define uint64_clz(x)              stdc_leading_zeros((uint64_t)(x))
-    #define uint64_ctz(x)              stdc_trailing_zeros((uint64_t)(x))
-    #define uint64_popcount(x)         stdc_count_ones((uint64_t)(x))
-#else
-    // TODO: provide portable C implementation.
-    # error "clz/ctz/popcount/bswap for uint64_t rely on GCC/CLANG builtins"
-#endif
-#define uint64_hamming_distance(x, y)  uint64_popcount((x) ^ (y));
-
-//===</ FIXED-WIDTH INTEGERS >==================================================
-
-
-
 
 
 

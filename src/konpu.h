@@ -1,10 +1,15 @@
 #ifndef  KONPU_H
 #define  KONPU_H
 
+// platform
 #include "platform.h"
 #include "c.h"
 
+// utilities
+#include "bits.h"
 #include "util.h"
+
+// graphics
 #include "glyph.h"
 #include "rect.h"
 #include "canvas.h"

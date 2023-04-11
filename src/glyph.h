@@ -2,7 +2,7 @@
 #define  KONPU_GLYPH_H
 #include "platform.h"
 #include "c.h"
-#include "util.h"
+#include "bits.h"
 
 // glyph terminology:                                              uint* glyphs:
 // -----------------                                               -------------
@@ -102,19 +102,19 @@ typedef struct tetra {
 // pixelIndex(x,y)    => return the index of the bit representing the pixel(x,y)
 
 #define   glyph_fromPixel(x,y)                 (GLYPH(1) << glyph_pixelIndex((x),(y)))
-#define   glyph_pixelValue(glyph, x,y)         uint_bit((glyph), glyph_pixelIndex((x),(y)))
+#define   glyph_pixelValue(glyph, x,y)         uint_bitValue((glyph), glyph_pixelIndex((x),(y)))
 #define   glyph_pixelIndex(x,y)                ((GLYPH_WIDTH * GLYPH_HEIGHT - 1) - (x) - GLYPH_WIDTH * (y))
 
 #define   quadrant_fromPixel(x,y)              (QUADRANT(1) << quadrant_pixelIndex((x),(y)))
-#define   quadrant_pixelValue(quadrant, x,y)   uint_bit((quadrant), quadrant_pixelIndex((x),(y)))
+#define   quadrant_pixelValue(quadrant, x,y)   uint_bitValue((quadrant), quadrant_pixelIndex((x),(y)))
 #define   quadrant_pixelIndex(x,y)             ((QUADRANT_WIDTH * QUADRANT_HEIGHT - 1) - (x) - QUADRANT_WIDTH * (y))
 
 #define   tallhalf_fromPixel(x,y)              (TALLHALF(1) << tallhalf_pixelIndex((x),(y)))
-#define   tallhalf_pixelValue(tallhalf, x,y)   uint_bit((tallhalf), tallhalf_pixelIndex((x),(y)))
+#define   tallhalf_pixelValue(tallhalf, x,y)   uint_bitValue((tallhalf), tallhalf_pixelIndex((x),(y)))
 #define   tallhalf_pixelIndex(x,y)             ((TALLHALF_WIDTH * TALLHALF_HEIGHT - 1) - (x) - TALLHALF_WIDTH * (y))
 
 #define   widehalf_fromPixel(x,y)              (WIDEHALF(1) << widehalf_pixelIndex((x),(y)))
-#define   widehalf_pixelValue(quandrant, x,y)  uint_bit((widehalf), widehalf_pixelIndex((x),(y)))
+#define   widehalf_pixelValue(quandrant, x,y)  uint_bitValue((widehalf), widehalf_pixelIndex((x),(y)))
 #define   widehalf_pixelIndex(x,y)             ((WIDEHALF_WIDTH * WIDEHALF_HEIGHT - 1) - (x) - WIDEHALF_WIDTH * (y))
 
 pair      tallpair_fromPixel(int x, int y);
@@ -165,14 +165,14 @@ uint64_t  tetra_pixelValue(tetra t, int x, int y);
 #define tallhalf_line7_H(  tallhalf)  ((tallhalf) <<  4 & 0x0F)
 
 // returns a 0x00-0xFF value representing a wide half's line (line: 0-3)
-#define widehalf_line(widehalf, n)    uint_byte((widehalf), 4-(n))
+#define widehalf_line(widehalf, n)    uint_byteValue((widehalf), 4-(n))
 #define widehalf_line0(widehalf)      ((widehalf) >> 24       )
 #define widehalf_line1(widehalf)      ((widehalf) >> 16 & 0xFF)
 #define widehalf_line2(widehalf)      ((widehalf) >>  8 & 0xFF)
 #define widehalf_line3(widehalf)      ((widehalf)       & 0xFF)
 
 // returns a 0x00-0xFF value representing a glyph line (line: 0-7)
-#define glyph_line(glyph, n)          uint_byte((glyph), 7-(n))
+#define glyph_line(glyph, n)          uint_byteValue((glyph), 7-(n))
 #define glyph_line0(glyph)            ((glyph) >>  56        )
 #define glyph_line1(glyph)            ((glyph) >>  48  & 0xFF)
 #define glyph_line2(glyph)            ((glyph) >>  40  & 0xFF)

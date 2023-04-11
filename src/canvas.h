@@ -52,7 +52,7 @@ static inline uint64_t*  canvas_glyphPointer(canvas cvas, int x, int y)   { retu
 // --------------------------
 //
 //   - Query the value:
-//     bool lit = uint_bit(canvas_glyph(canvas, x/8, y/8),
+//     bool lit = uint_bitValue(canvas_glyph(canvas, x/8, y/8),
 //                         glyph_pixel_idx(x%8, y%8));
 //
 //   - Set/Unset/Toggle pixel(x,y)

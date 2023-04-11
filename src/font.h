@@ -26,22 +26,23 @@ chr_quadrant_quad(unsigned char q)              // represent a 2x2 bitmap,
 {  assert(q < 16);                              // to the size of quadrant:
                                                 //
    return                                       // pixel 1  _     _ pixel 2
-      uint_bit(q, 3) * QUADRANT_TOP_LEFT     |  // (bit 3)   \. ./  (bit 2)
-      uint_bit(q, 2) * QUADRANT_TOP_RIGHT    |  //            . .
-      uint_bit(q, 1) * QUADRANT_BOTTOM_LEFT  |  // pixel 3  _/   \_ pixel 4
-      uint_bit(q, 0) * QUADRANT_BOTTOM_RIGHT ;  // (bit 1)          (bit 0)
+      uint_bitValue(q, 3) * QUADRANT_TOP_LEFT     |  // (bit 3)   \. ./  (bit 2)
+      uint_bitValue(q, 2) * QUADRANT_TOP_RIGHT    |  //            . .
+      uint_bitValue(q, 1) * QUADRANT_BOTTOM_LEFT  |  // pixel 3  _/   \_ pixel 4
+      uint_bitValue(q, 0) * QUADRANT_BOTTOM_RIGHT ;  // (bit 1)          (bit 0)
 }
 */
 
 static inline uint64_t
-chr(unsigned char code) {
+chr(unsigned char code)
+{
    // TODO/FIXME: just for now and until we define a proper font,
    //             vertically stretch the corresponding widehalf
    uint64_t w = chr_widehalf(code);
-   return uint_byte(w, 0) << 0*8 | uint_byte(w, 0) << 1*8 |
-          uint_byte(w, 1) << 2*8 | uint_byte(w, 1) << 3*8 |
-          uint_byte(w, 2) << 4*8 | uint_byte(w, 2) << 5*8 |
-          uint_byte(w, 3) << 6*8 | uint_byte(w, 3) << 7*8 ;
+   return uint_byteValue(w, 0) << 0*8 | uint_byteValue(w, 0) << 1*8 |
+          uint_byteValue(w, 1) << 2*8 | uint_byteValue(w, 1) << 3*8 |
+          uint_byteValue(w, 2) << 4*8 | uint_byteValue(w, 2) << 5*8 |
+          uint_byteValue(w, 3) << 6*8 | uint_byteValue(w, 3) << 7*8 ;
 }
 
 static inline uint32_t

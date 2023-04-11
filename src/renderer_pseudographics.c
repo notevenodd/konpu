@@ -77,7 +77,7 @@ static int rendererPseudoGraphics_renderFullBlocks(void)
            int n = glyph_pixelIndex(x % GLYPH_WIDTH, y % GLYPH_HEIGHT);
 
            // read pixel value and print space or block accordingly:
-           if (uint_bit(glyph, n)) {
+           if (uint_bitValue(glyph, n)) {
               RENDERER_PSEUDOGRAPHICS_PUTBLOCK(0x88); //U+2588 (full block)
            } else {
               RENDERER_PSEUDOGRAPHICS_PUTCHAR(0x20); // space
@@ -101,8 +101,8 @@ static int rendererPseudoGraphics_renderHorizontalHalfBlocks(void)
            int n = glyph_pixelIndex(x % GLYPH_WIDTH, y % GLYPH_HEIGHT);
 
            // print half block
-           unsigned char c = uint_bit(glyph, n)               << 1 |
-                             uint_bit(glyph, n - GLYPH_WIDTH)      ;
+           unsigned char c = uint_bitValue(glyph, n)               << 1 |
+                             uint_bitValue(glyph, n - GLYPH_WIDTH)      ;
            switch(c) {
               case 0 : RENDERER_PSEUDOGRAPHICS_PUTCHAR( 0x20); break; // space
               case 1 : RENDERER_PSEUDOGRAPHICS_PUTBLOCK(0x84); break; // U+2584 (lower half)
@@ -129,8 +129,8 @@ static int rendererPseudoGraphics_renderVerticalHalfBlocks(void)
            int n = glyph_pixelIndex(x % GLYPH_WIDTH, y % GLYPH_HEIGHT);
 
            // print vertical half block
-           unsigned char c = uint_bit(glyph, n)     << 1 |
-                             uint_bit(glyph, n - 1)      ;
+           unsigned char c = uint_bitValue(glyph, n)     << 1 |
+                             uint_bitValue(glyph, n - 1)      ;
            switch(c) {
               case 0 : RENDERER_PSEUDOGRAPHICS_PUTCHAR( 0x20); break; // space
               case 1 : RENDERER_PSEUDOGRAPHICS_PUTBLOCK(0x90); break; // U+2590 (right half)
@@ -157,10 +157,10 @@ static int rendererPseudoGraphics_renderQuadBlocks(void)
            int n = glyph_pixelIndex(x % GLYPH_WIDTH, y % GLYPH_HEIGHT);
 
            // read a half block character and print it out:
-           unsigned char c = uint_bit(glyph, n)                   << 3 |
-                             uint_bit(glyph, n - 1)               << 2 |
-                             uint_bit(glyph, n - GLYPH_WIDTH)     << 1 |
-                             uint_bit(glyph, n - GLYPH_WIDTH - 1)      ;
+           unsigned char c = uint_bitValue(glyph, n)                   << 3 |
+                             uint_bitValue(glyph, n - 1)               << 2 |
+                             uint_bitValue(glyph, n - GLYPH_WIDTH)     << 1 |
+                             uint_bitValue(glyph, n - GLYPH_WIDTH - 1)      ;
 
            // print it out as UTF-8
            static unsigned char quad_lastbyte[] = {
@@ -191,14 +191,14 @@ static int rendererPseudoGraphics_renderBrailleDots(void)
            // the codepoint 0x28XX, with XX being computed     /  0x04 0x20
            // with those weights for the raised bits,             0x40 0x80
            unsigned char braille =
-              uint_bit(glyph, n                      ) * 0x01 |
-              uint_bit(glyph, n -                   1) * 0x08 |
-              uint_bit(glyph, n -     GLYPH_WIDTH    ) * 0x02 |
-              uint_bit(glyph, n -     GLYPH_WIDTH - 1) * 0x10 |
-              uint_bit(glyph, n - 2 * GLYPH_WIDTH    ) * 0x04 |
-              uint_bit(glyph, n - 2 * GLYPH_WIDTH - 1) * 0x20 |
-              uint_bit(glyph, n - 3 * GLYPH_WIDTH    ) * 0x40 |
-              uint_bit(glyph, n - 3 * GLYPH_WIDTH - 1) * 0x80 ;
+              uint_bitValue(glyph, n                      ) * 0x01 |
+              uint_bitValue(glyph, n -                   1) * 0x08 |
+              uint_bitValue(glyph, n -     GLYPH_WIDTH    ) * 0x02 |
+              uint_bitValue(glyph, n -     GLYPH_WIDTH - 1) * 0x10 |
+              uint_bitValue(glyph, n - 2 * GLYPH_WIDTH    ) * 0x04 |
+              uint_bitValue(glyph, n - 2 * GLYPH_WIDTH - 1) * 0x20 |
+              uint_bitValue(glyph, n - 3 * GLYPH_WIDTH    ) * 0x40 |
+              uint_bitValue(glyph, n - 3 * GLYPH_WIDTH - 1) * 0x80 ;
 
            // conversion to UTF-8 representation (3 bytes) reduces to:
            RENDERER_PSEUDOGRAPHICS_PUTCHAR(0xe2);
@@ -230,26 +230,26 @@ static int rendererPseudoGraphics_renderSextantBlocks(void)
            int n = glyph_pixelIndex(x % GLYPH_WIDTH, ypos);
 
            // read the sextant pixels
-           unsigned sext = uint_bit(glyph, n                      ) << 5 |
-                           uint_bit(glyph, n -                   1) << 4 ;
+           unsigned sext = uint_bitValue(glyph, n                      ) << 5 |
+                           uint_bitValue(glyph, n -                   1) << 4 ;
                            // we started by reading the first line
            switch (ypos) {
               default:     // we can read the two following line from same glyph
-                  sext |=  uint_bit(glyph, n -     GLYPH_WIDTH    ) << 3 |
-                           uint_bit(glyph, n -     GLYPH_WIDTH - 1) << 2 |
-                           uint_bit(glyph, n - 2 * GLYPH_WIDTH    ) << 1 |
-                           uint_bit(glyph, n - 2 * GLYPH_WIDTH - 1)      ;
+                  sext |=  uint_bitValue(glyph, n -     GLYPH_WIDTH    ) << 3 |
+                           uint_bitValue(glyph, n -     GLYPH_WIDTH - 1) << 2 |
+                           uint_bitValue(glyph, n - 2 * GLYPH_WIDTH    ) << 1 |
+                           uint_bitValue(glyph, n - 2 * GLYPH_WIDTH - 1)      ;
                   break;
 
               case  6:     // we can read one more line from same glyph
-                  sext |=  uint_bit(glyph, n -     GLYPH_WIDTH    ) << 3 |
-                           uint_bit(glyph, n -     GLYPH_WIDTH - 1) << 2 ;
+                  sext |=  uint_bitValue(glyph, n -     GLYPH_WIDTH    ) << 3 |
+                           uint_bitValue(glyph, n -     GLYPH_WIDTH - 1) << 2 ;
                   if (y > GLYPH_WIDTH * screen.height)
                      break;
                   glyph = *(&glyph + screen.stride); // then we go to the glyph
                   n = glyph_pixelIndex(x % GLYPH_WIDTH, 0);  //    underneath
-                  sext |=  uint_bit(glyph, n                      ) << 2 |
-                           uint_bit(glyph, n                   - 1) << 1 ;
+                  sext |=  uint_bitValue(glyph, n                      ) << 2 |
+                           uint_bitValue(glyph, n                   - 1) << 1 ;
                   break;
 
               case  7:     // we need to read all the rest from underneath glyph
@@ -257,10 +257,10 @@ static int rendererPseudoGraphics_renderSextantBlocks(void)
                      break;
                   glyph = *(&glyph + screen.stride);
                   n = glyph_pixelIndex(x % GLYPH_WIDTH, 0);
-                  sext |=  uint_bit(glyph, n                      ) << 3 |
-                           uint_bit(glyph, n                   - 1) << 2 |
-                           uint_bit(glyph, n -     GLYPH_WIDTH    ) << 2 |
-                           uint_bit(glyph, n -     GLYPH_WIDTH - 1) << 1 ;
+                  sext |=  uint_bitValue(glyph, n                      ) << 3 |
+                           uint_bitValue(glyph, n                   - 1) << 2 |
+                           uint_bitValue(glyph, n -     GLYPH_WIDTH    ) << 2 |
+                           uint_bitValue(glyph, n -     GLYPH_WIDTH - 1) << 1 ;
                   break;
            }
 
