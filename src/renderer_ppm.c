@@ -94,6 +94,8 @@ int rendererPPM_init(int zoomx, int zoomy)
    // default value (3) if range is incorrect)
    if ((zoomx <= 0) || (zoomx > 20))   zoomx = 3;
    if ((zoomy <= 0) || (zoomy > 20))   zoomy = 3;
+   rendererPPM_zoomx = zoomx;
+   rendererPPM_zoomy = zoomy;
 
    // drop the active renderer (we can't do error checking)
    renderer_drop();
